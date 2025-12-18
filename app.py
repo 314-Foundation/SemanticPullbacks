@@ -18,8 +18,8 @@ from lib.dataset import (
     imagenette_label_to_imagenet,
 )
 from lib.helpers import maxpool2d_param_extractor, replace_module_with_custom_
-from lib.modules import SurrogateSoftMaxPool2d, TwoWayReLU
 from lib.pga import PGA
+from lib.surrogates import SurrogateSoftMaxPool2d, TwoWayReLU
 
 if torch.cuda.is_available():
     device_ = "cuda"
