@@ -3,7 +3,7 @@ from torch import nn
 from torch.utils.data import DataLoader
 from torchvision import transforms
 from torchvision import transforms as T
-from torchvision.datasets import Imagenette
+from torchvision.datasets import ImageFolder, Imagenette
 
 MEAN = [0.485, 0.456, 0.406]
 STD = [0.229, 0.224, 0.225]
@@ -84,14 +84,23 @@ class ConditionalTransform(nn.Module):
         return img
 
 
-def get_dataset(download=False):
+def get_imagenette(download=False):
     return Imagenette(
         root="../data",
         split="val",  # or "train"
         size="160px",  # can also be "320" or "full"
         download=download,
-        transform=get_transform(),
+        transform=ConditionalTransform,
         target_transform=imagenette_label_to_imagenet,
+    )
+
+
+def get_imagenet():
+    return ImageFolder(
+        root="../data/imagenet/val",
+        # transform=get_transform(),
+        transform=ConditionalTransform(),
+        target_transform=None,
     )
 
 

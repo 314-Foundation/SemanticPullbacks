@@ -88,22 +88,22 @@ class PGA(Attack):
 
             adv_images = adv_images.detach()
 
-            adv_images_norms = (
-                torch.norm(adv_images.flatten(1), p=self.pnorm, dim=1)
-                .clamp_min(self.eps_for_division)
-                .view(-1, 1, 1, 1)
-            )
-
-            grad_norms = (
-                torch.norm(grad.flatten(1), p=self.pnorm, dim=1)
-                .clamp_min(self.eps_for_division)
-                .view(-1, 1, 1, 1)
-            )
-
             if self.alpha is not None:
+                grad_norms = (
+                    torch.norm(grad.flatten(1), p=self.pnorm, dim=1)
+                    .clamp_min(self.eps_for_division)
+                    .view(-1, 1, 1, 1)
+                )
                 grad = grad / grad_norms
+
                 if self.relative_alpha:
+                    adv_images_norms = (
+                        torch.norm(adv_images.flatten(1), p=self.pnorm, dim=1)
+                        .clamp_min(self.eps_for_division)
+                        .view(-1, 1, 1, 1)
+                    )
                     grad = grad * adv_images_norms
+
                 grad = grad * self.alpha
 
             adv_images = adv_images + grad
@@ -121,4 +121,4 @@ class PGA(Attack):
 
             self.clip_images_(adv_images)
 
-        return adv_images, grad
+        return adv_images
