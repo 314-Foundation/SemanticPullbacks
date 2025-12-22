@@ -44,6 +44,7 @@ class LocalRelevanceAscent(LocalGradientAscent):
 
 
 # QUANTUS ADAPTERS
+# TODO: PGA assumes images are in [-1,1], so we may need to add normalization here?
 
 
 def quantus_local_gradient_ascent_explain_func(

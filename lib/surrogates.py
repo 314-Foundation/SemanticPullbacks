@@ -142,6 +142,7 @@ class SurrogateLayerNorm2d(SurrogateLayerNorm):
 
 
 class SurrogateMultiheadAttention(SurrogateModule, nn.MultiheadAttention):
+    # TODO: maybe this can be improved further?
     def forward(self, query, key, value, *args, **kwargs):
         orig, attn_weights = super().forward(query, key, value, *args, **kwargs)
 
