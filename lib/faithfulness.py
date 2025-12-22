@@ -28,5 +28,6 @@ def evaluate_directional_faithfulness(
 
     acc = (scores.max(dim=1)[1] == labels).float().mean()
     print(f"Directional Faithfulness Accuracy: {acc.item():.4f}")
+    print(f"Scores shape: {scores.shape}")
 
     return acc, scores, attributions
