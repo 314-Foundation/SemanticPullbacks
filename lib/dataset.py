@@ -23,6 +23,16 @@ IMAGENETTE_TO_IMAGENET = {
 }
 
 
+class ImagenetToImagenetteHead(nn.Module):
+    def __init__(self):
+        super().__init__()
+        idx = [IMAGENETTE_TO_IMAGENET[i] for i in range(len(IMAGENETTE_TO_IMAGENET))]
+        self.imagenet_indices = torch.tensor(idx, dtype=torch.long)
+
+    def forward(self, logits_imagenet: torch.Tensor) -> torch.Tensor:
+        return logits_imagenet.index_select(dim=-1, index=self.imagenet_indices)
+
+
 def imagenette_label_to_imagenet(label):
     return IMAGENETTE_TO_IMAGENET[label]
 
@@ -90,7 +100,7 @@ def get_imagenette(download=False):
         split="val",  # or "train"
         size="160px",  # can also be "320" or "full"
         download=download,
-        transform=ConditionalTransform,
+        transform=ConditionalTransform(),
         target_transform=imagenette_label_to_imagenet,
     )
 
@@ -128,3 +138,7 @@ def get_examples(loader, all_classes=False):
     labels = torch.tensor(target_classes)  # [5]
 
     return images, labels
+
+
+def wrap_imagenet_model(model):
+    return nn.Sequential(FromMyNormalizeToImageNet(), model, ImagenetToImagenetteHead())
