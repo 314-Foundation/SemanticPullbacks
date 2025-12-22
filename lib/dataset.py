@@ -27,7 +27,7 @@ class ImagenetToImagenetteHead(nn.Module):
     def __init__(self):
         super().__init__()
         idx = [IMAGENETTE_TO_IMAGENET[i] for i in range(len(IMAGENETTE_TO_IMAGENET))]
-        self.imagenet_indices = torch.tensor(idx, dtype=torch.long)
+        self.register_buffer("imagenet_indices", torch.tensor(idx, dtype=torch.long))
 
     def forward(self, logits_imagenet: torch.Tensor) -> torch.Tensor:
         return logits_imagenet.index_select(dim=-1, index=self.imagenet_indices)
@@ -101,7 +101,7 @@ def get_imagenette(download=False):
         size="160px",  # can also be "320" or "full"
         download=download,
         transform=ConditionalTransform(),
-        target_transform=imagenette_label_to_imagenet,
+        # target_transform=imagenette_label_to_imagenet,
     )
 
 
@@ -110,7 +110,7 @@ def get_imagenet():
         root="../data/imagenet/val",
         # transform=get_transform(),
         transform=ConditionalTransform(),
-        target_transform=None,
+        # target_transform=None,
     )
 
 

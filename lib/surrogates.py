@@ -20,7 +20,7 @@ class SurrogateModule(nn.Module):
         ret = super().extra_repr()
         if ret:
             ret += ", "
-        return f"{ret}temperature={self.temperature}, standard_backward={self.standard_backward}"
+        return f"{ret}standard_backward={self.standard_backward}, temperature={self.temperature}"
 
 
 class FGIModule(SurrogateModule):
@@ -191,6 +191,7 @@ def replace_modules_with_surrogates_(
 
         if key in temperatures:
             child.temperature = temperatures[key]
+            child.standard_backward = False
 
             if cls_name in SURROGATE_CLASS_MAP:
                 child.__class__ = SURROGATE_CLASS_MAP[cls_name][0]
@@ -202,9 +203,10 @@ def replace_modules_with_surrogates_(
             )
 
 
-def toggle_standard_backward_in_surrogates_(
+def set_standard_backward_in_surrogates_(
     module,
     class_names,
+    standard_backward=False,
     surrogate_prefix="Surrogate",
 ):
     for name, child in module.named_children():
@@ -216,12 +218,13 @@ def toggle_standard_backward_in_surrogates_(
         )
 
         if key in class_names:
-            child.standard_backward = not child.standard_backward
+            child.standard_backward = standard_backward
 
         else:
-            replace_modules_with_surrogates_(
+            set_standard_backward_in_surrogates_(
                 child,
-                temperatures=class_names,
+                class_names=class_names,
+                standard_backward=standard_backward,
                 surrogate_prefix=surrogate_prefix,
             )
 
@@ -244,14 +247,16 @@ def soften_module_inplace_(
     )
 
 
-def toggle_module_standard_backward_(
+def set_module_standard_backward_(
     module,
+    standard_backward=False,
     surrogate_prefix="Surrogate",
 ):
     class_names = list(SURROGATE_CLASS_MAP.keys())
 
-    replace_modules_with_surrogates_(
+    set_standard_backward_in_surrogates_(
         module,
         class_names=class_names,
+        standard_backward=standard_backward,
         surrogate_prefix=surrogate_prefix,
     )
