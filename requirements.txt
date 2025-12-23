@@ -6,7 +6,7 @@ spaces
 gradio
 gradio_imageslider
 matplotlib
-# timm
+timm
 captum
 # scikit-image>=0.26.0rc1
 quantus

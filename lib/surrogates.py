@@ -45,6 +45,7 @@ class FGIModule(SurrogateModule):
 class SurrogateReLU(FGIModule, nn.ReLU):
     def backward_gradient(self, x):
         return F.sigmoid(x / self.temperature)
+        # return normal_cdf(x, self.temperature)
 
 
 class SurrogateSiLU(FGIModule, nn.SiLU):
@@ -193,6 +194,7 @@ def replace_modules_with_surrogates_(
         if key in temperatures:
             child.temperature = temperatures[key]
             child.standard_backward = False
+            child.inplace = False
 
             if cls_name in SURROGATE_CLASS_MAP:
                 child.__class__ = SURROGATE_CLASS_MAP[cls_name][0]

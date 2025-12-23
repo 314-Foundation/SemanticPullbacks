@@ -19,12 +19,12 @@ def evaluate_directional_faithfulness(
     for target in target_list:
         attributions.append(attribution_method.attribute(images, target=target))
 
-    attributions = torch.stack(attributions)  # (n_classes, batch_size, C, H, W)
+    attributions = torch.stack(attributions, dim=1)  # (batch_size, n_classes, C, H, W)
 
     if normalize:
         attributions = F.normalize(attributions, dim=(2, 3, 4))
 
-    scores = einsum("bchw, nbchw -> bn", images, attributions)
+    scores = einsum("bchw, bnchw -> bn", images, attributions)
 
     acc = (scores.max(dim=1)[1] == labels).float().mean()
     print(f"Directional Faithfulness Accuracy: {acc.item():.4f}")
