@@ -48,13 +48,22 @@ def my_denormalize(x):
     return (x + 1) / 2  # Map from [-1,1] to [0,1]
 
 
-class FromMyNormalizeToImageNet(nn.Module):
+class ImageNetNormalize(nn.Module):
     def __init__(self):
         super().__init__()
         self.imagenet_norm = T.Normalize(
             mean=MEAN,
             std=STD,
         )
+
+    def forward(self, x):
+        return self.imagenet_norm(x)
+
+
+class FromMyNormalizeToImageNet(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.imagenet_norm = ImageNetNormalize()
 
     def forward(self, x):
         x = (x + 1) / 2  # Map from [-1,1] to [0,1]
@@ -142,4 +151,5 @@ def get_examples(loader, all_classes=False):
 
 
 def wrap_imagenet_model(model):
+    # return nn.Sequential(ImageNetNormalize(), model, ImagenetToImagenetteHead())
     return nn.Sequential(FromMyNormalizeToImageNet(), model, ImagenetToImagenetteHead())
