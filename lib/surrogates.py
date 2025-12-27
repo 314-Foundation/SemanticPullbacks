@@ -135,6 +135,7 @@ class SurrogateLayerNorm(SurrogateModule, nn.LayerNorm):
 
 
 class SurrogateLayerNorm2d(SurrogateLayerNorm):
+    # used in e.g. torchvision.models.convnext_tiny
     def forward(self, x: Tensor) -> Tensor:
         x = x.permute(0, 2, 3, 1)
         x = super().forward(x)
@@ -169,11 +170,14 @@ class SurrogateMultiheadAttention(SurrogateModule, nn.MultiheadAttention):
 
 SURROGATE_CLASS_MAP = {
     "ReLU": (SurrogateReLU, 0.3),
-    "SiLU": (SurrogateSiLU, 0.6),
+    "SiLU": (SurrogateSiLU, 1.6),
     "GELU": (SurrogateGELU, 1.0),
     "MaxPool2d": (SurrogateMaxPool2d, 0.2),
     "LayerNorm": (SurrogateLayerNorm, None),
-    "LayerNorm2d": (SurrogateLayerNorm2d, None),
+    "LayerNorm2d": (
+        SurrogateLayerNorm2d,
+        None,
+    ),  # sometimes modules use non-standard layers like this
     "MultiheadAttention": (SurrogateMultiheadAttention, 1.2),
 }
 

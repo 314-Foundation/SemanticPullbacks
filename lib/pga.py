@@ -15,19 +15,21 @@ class PGA(Attack):
         alpha=20.0,
         steps=10,
         eps=100,
+        normalize_step=True,
         relative_alpha=False,
         self_explain=False,
         use_cross_entropy_loss=False,
         pnorm=2,
         clip_min=-1.0,
         clip_max=1.0,
-        clip_margin=0.0,
+        clip_margin=0.0,  # set to None to disable clipping to the [-1, 1] range
         eps_for_division=1e-20,
     ):
         super().__init__("PGA", model)
         self.eps = eps
         self.alpha = alpha
         self.steps = steps
+        self.normalize_step = normalize_step
 
         self.clip_margin = clip_margin
         self.clip_min = clip_min
@@ -89,12 +91,13 @@ class PGA(Attack):
             adv_images = adv_images.detach()
 
             if self.alpha is not None:
-                grad_norms = (
-                    torch.norm(grad.flatten(1), p=self.pnorm, dim=1)
-                    .clamp_min(self.eps_for_division)
-                    .view(-1, 1, 1, 1)
-                )
-                grad = grad / grad_norms
+                if self.normalize_step:
+                    grad_norms = (
+                        torch.norm(grad.flatten(1), p=self.pnorm, dim=1)
+                        .clamp_min(self.eps_for_division)
+                        .view(-1, 1, 1, 1)
+                    )
+                    grad = grad / grad_norms
 
                 if self.relative_alpha:
                     adv_images_norms = (

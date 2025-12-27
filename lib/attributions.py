@@ -6,15 +6,15 @@ from lib.surrogates import set_module_standard_backward_, soften_module_inplace_
 
 
 class LocalGradientAscent:
-    def __init__(self, model, alpha=None, steps=1, eps=None, clip_margin=None):
+    def __init__(
+        self,
+        model,
+        **pga_kwargs,
+    ):
         self.model = model
         self.atk = PGA(
             self.model,
-            alpha=alpha,
-            steps=steps,
-            eps=eps,
-            # relative_alpha=True,
-            clip_margin=clip_margin,  # set to None to disable clipping to the [-1, 1] range
+            **pga_kwargs,
         )
         self.atk.set_mode_targeted_by_label()
 
@@ -34,10 +34,14 @@ class LocalGradientAscent:
 class LocalRelevanceAscent(LocalGradientAscent):
     # NOTE: This modifies the model IN PLACE, but should not affect forward nor backward passes, as we leave standard_backward=True
     def __init__(
-        self, model, temperatures, alpha=None, steps=1, eps=None, clip_margin=None
+        self,
+        model,
+        temperatures,
+        **pga_kwargs,
     ):
         super().__init__(
-            model, alpha=alpha, steps=steps, eps=eps, clip_margin=clip_margin
+            model,
+            **pga_kwargs,
         )
 
         self.temperatures = temperatures
@@ -64,11 +68,8 @@ def quantus_local_gradient_ascent_explain_func(
     model,
     inputs,
     targets,
-    alpha=None,
-    steps=1,
-    eps=None,
-    clip_margin=None,
     device=None,
+    **pga_kwargs,
 ):
     """
     Quantus-compatible explain_func for LocalGradientAscent.
@@ -91,7 +92,8 @@ def quantus_local_gradient_ascent_explain_func(
         targets = torch.as_tensor(targets, device=device)
 
     lga = LocalGradientAscent(
-        model, alpha=alpha, steps=steps, eps=eps, clip_margin=clip_margin
+        model,
+        **pga_kwargs,
     )
     attributions = lga.attribute(inputs, targets)
     return attributions.detach().cpu().numpy()
@@ -102,11 +104,8 @@ def quantus_local_relevance_ascent_explain_func(
     inputs,
     targets,
     temperatures,
-    alpha=None,
-    steps=1,
-    eps=None,
-    clip_margin=None,
     device=None,
+    **pga_kwargs,
 ):
     """
     Quantus-compatible explain_func for LocalGradientAscent.
@@ -132,10 +131,7 @@ def quantus_local_relevance_ascent_explain_func(
     lga = LocalRelevanceAscent(
         model,
         temperatures=temperatures,
-        alpha=alpha,
-        steps=steps,
-        eps=eps,
-        clip_margin=clip_margin,
+        **pga_kwargs,
     )
     attributions = lga.attribute(inputs, targets)
     return attributions.detach().cpu().numpy()

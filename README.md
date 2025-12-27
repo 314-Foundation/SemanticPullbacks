@@ -6,7 +6,7 @@
 
 For ResNet50:
 - Relevance Pullbacks achieve ~100% Response Faithfulness (RF), while standard gradients have ~45% RF
-- Semantic Pullbacks (LRA with 5 steps, each of L2 length 20) achieve ~80% RF, while standard PGA has ~50% RF
+- Semantic Pullbacks (LRA with 5 steps, each of L2 length 20) achieve ~80% RF, while standard PGA has ~35% RF
 
 
 # TODO
