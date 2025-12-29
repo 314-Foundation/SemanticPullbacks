@@ -3,7 +3,9 @@ from typing import Iterable, Optional, Tuple, Union
 
 import torch
 import torch.nn.functional as F
+from timm.models.pvt_v2 import Attention as PVTAttention
 from torch import Tensor, nn
+from torchvision.models.convnext import LayerNorm2d
 
 
 def normal_cdf(x, temp=1.0):
@@ -21,6 +23,14 @@ class SurrogateModule(nn.Module):
         if ret:
             ret += ", "
         return f"{ret}standard_backward={self.standard_backward}, temperature={self.temperature}"
+
+    @classmethod
+    def replace_class_with_surrogate(
+        cls, module, temperature=1.0, standard_backward=False
+    ):
+        module.__class__ = cls
+        module.temperature = temperature
+        module.standard_backward = standard_backward
 
 
 class FGIModule(SurrogateModule):
@@ -42,20 +52,41 @@ class FGIModule(SurrogateModule):
         return y
 
 
-class SurrogateReLU(FGIModule, nn.ReLU):
+class SurrogateActivation(FGIModule):
+    @classmethod
+    def replace_class_with_surrogate(cls, module, *args, **kwargs):
+        super().replace_class_with_surrogate(module, *args, **kwargs)
+        module.inplace = False
+
+
+class SurrogateReLU(SurrogateActivation, nn.ReLU):
     def backward_gradient(self, x):
         return F.sigmoid(x / self.temperature)
+
+        # approximate expected gating
         # return normal_cdf(x, self.temperature)
 
 
-class SurrogateSiLU(FGIModule, nn.SiLU):
+class SurrogateSiLU(SurrogateActivation, nn.SiLU):
     def backward_gradient(self, x):
         return F.sigmoid(x / self.temperature)
 
+        # approximate expected gating
+        kappa = torch.tensor(1.702, device=x.device)
+        denom = torch.sqrt(kappa**2 + self.temperature**2)
 
-class SurrogateGELU(FGIModule, nn.GELU):
+        return normal_cdf(x, denom)
+
+
+class SurrogateGELU(SurrogateActivation, nn.GELU):
     def backward_gradient(self, x):
         return normal_cdf(x, self.temperature)
+
+        # approximate expected gating
+        one = torch.tensor(1.0, device=x.device)
+        denom = torch.sqrt(one + self.temperature**2)
+
+        return normal_cdf(x, denom)
 
 
 class SoftMaxPool2d(SurrogateModule, nn.MaxPool2d):
@@ -105,7 +136,6 @@ class SurrogateMaxPool2d(SoftMaxPool2d):
         return hard.detach() + (soft - soft.detach())
 
 
-# class SurrogateLayerNorm(nn.Module):
 class SurrogateLayerNorm(SurrogateModule, nn.LayerNorm):
     def forward(self, x: Tensor) -> Tensor:
         # Normalize over the last D dimensions, where
@@ -168,102 +198,137 @@ class SurrogateMultiheadAttention(SurrogateModule, nn.MultiheadAttention):
         return ret, attn_weights
 
 
+class SurrogatePVTAttention(SurrogateModule, PVTAttention):
+    def forward(self, x, feat_size):
+        B, N, C = x.shape
+        H, W = feat_size
+        q = self.q(x).reshape(B, N, self.num_heads, -1).permute(0, 2, 1, 3)
+
+        if self.pool is not None:
+            x = x.permute(0, 2, 1).reshape(B, C, H, W)
+            x = self.sr(self.pool(x)).reshape(B, C, -1).permute(0, 2, 1)
+            x = self.norm(x)
+            x = self.act(x)
+            kv = (
+                self.kv(x)
+                .reshape(B, -1, 2, self.num_heads, self.head_dim)
+                .permute(2, 0, 3, 1, 4)
+            )
+        else:
+            if self.sr is not None:
+                x = x.permute(0, 2, 1).reshape(B, C, H, W)
+                x = self.sr(x).reshape(B, C, -1).permute(0, 2, 1)
+                x = self.norm(x)
+                kv = (
+                    self.kv(x)
+                    .reshape(B, -1, 2, self.num_heads, self.head_dim)
+                    .permute(2, 0, 3, 1, 4)
+                )
+            else:
+                kv = (
+                    self.kv(x)
+                    .reshape(B, -1, 2, self.num_heads, self.head_dim)
+                    .permute(2, 0, 3, 1, 4)
+                )
+        k, v = kv.unbind(0)
+
+        if self.fused_attn:
+            x = F.scaled_dot_product_attention(
+                q, k, v, dropout_p=self.attn_drop.p if self.training else 0.0
+            )
+        else:
+            q = q * self.scale
+            attn = q @ k.transpose(-2, -1)
+            attn = attn.softmax(dim=-1)
+            attn = self.attn_drop(attn)
+            x = attn @ v
+
+        x = x.transpose(1, 2).reshape(B, N, C)
+        x = self.proj(x)
+        x = self.proj_drop(x)
+        return x
+
+
 SURROGATE_CLASS_MAP = {
-    "ReLU": (SurrogateReLU, 0.3),
-    "SiLU": (SurrogateSiLU, 1.6),
-    "GELU": (SurrogateGELU, 1.0),
-    "MaxPool2d": (SurrogateMaxPool2d, 0.2),
-    "LayerNorm": (SurrogateLayerNorm, None),
-    "LayerNorm2d": (
-        SurrogateLayerNorm2d,
-        None,
-    ),  # sometimes modules use non-standard layers like this
-    "MultiheadAttention": (SurrogateMultiheadAttention, 1.2),
+    nn.ReLU: (SurrogateReLU, 0.3),
+    nn.SiLU: (SurrogateSiLU, 1.6),
+    nn.GELU: (SurrogateGELU, 1.0),
+    nn.MaxPool2d: (SurrogateMaxPool2d, 0.2),
+    nn.LayerNorm: (SurrogateLayerNorm, None),
+    LayerNorm2d: (SurrogateLayerNorm2d, None),
+    nn.MultiheadAttention: (SurrogateMultiheadAttention, 1.2),
+    PVTAttention: (SurrogatePVTAttention, 1.2),
 }
+INVERSE_SURROGATE_CLASS_MAP = {v[0]: k for k, v in SURROGATE_CLASS_MAP.items()}
+SURROGATE_CLASSES = tuple(SURROGATE_CLASS_MAP.keys())
 
 
 def replace_modules_with_surrogates_(
     module,
     temperatures,
-    surrogate_prefix="Surrogate",
 ):
     for name, child in module.named_children():
-        cls_name = child.__class__.__name__
-        key = (
-            cls_name[len(surrogate_prefix) :]
-            if cls_name.startswith(surrogate_prefix)
-            else cls_name
-        )
+        if isinstance(child, SURROGATE_CLASSES):
+            if isinstance(child, SurrogateModule):  # already a surrogate
+                surrogate_cls = type(child)
+                base_cls = INVERSE_SURROGATE_CLASS_MAP[surrogate_cls]
 
-        if key in temperatures:
-            child.temperature = temperatures[key]
-            child.standard_backward = False
-            child.inplace = False
-
-            if cls_name in SURROGATE_CLASS_MAP:
-                child.__class__ = SURROGATE_CLASS_MAP[cls_name][0]
+                child.temperature = temperatures[base_cls][1]
+            else:
+                base_cls = type(child)
+                surrogate_cls = SURROGATE_CLASS_MAP[base_cls][0]
+                surrogate_cls.replace_class_with_surrogate(
+                    child,
+                    temperature=temperatures[base_cls][1],
+                    standard_backward=False,
+                )
         else:
             replace_modules_with_surrogates_(
                 child,
                 temperatures=temperatures,
-                surrogate_prefix=surrogate_prefix,
             )
 
 
 def set_standard_backward_in_surrogates_(
     module,
-    class_names,
+    classes,
     standard_backward=False,
-    surrogate_prefix="Surrogate",
 ):
     for name, child in module.named_children():
-        cls_name = child.__class__.__name__
-        key = (
-            cls_name[len(surrogate_prefix) :]
-            if cls_name.startswith(surrogate_prefix)
-            else cls_name
-        )
-
-        if key in class_names:
-            child.standard_backward = standard_backward
-
+        if isinstance(child, SURROGATE_CLASSES):
+            if isinstance(child, SurrogateModule):
+                surrogate_cls = type(child)
+                base_cls = INVERSE_SURROGATE_CLASS_MAP[surrogate_cls]
+                if base_cls in classes:
+                    child.standard_backward = standard_backward
         else:
             set_standard_backward_in_surrogates_(
                 child,
-                class_names=class_names,
+                classes=classes,
                 standard_backward=standard_backward,
-                surrogate_prefix=surrogate_prefix,
             )
 
 
 def soften_module_inplace_(
     module,
     temperatures=None,
-    surrogate_prefix="Surrogate",
 ):
-    base_temperatures = {
-        key: SURROGATE_CLASS_MAP[key][1] for key in SURROGATE_CLASS_MAP.keys()
-    }
+    base_temperatures = {key: val[1] for key, val in SURROGATE_CLASS_MAP.items()}
     if temperatures is not None:
         base_temperatures.update(temperatures)
 
     replace_modules_with_surrogates_(
         module,
         temperatures=base_temperatures,
-        surrogate_prefix=surrogate_prefix,
     )
 
 
 def set_module_standard_backward_(
     module,
     standard_backward=False,
-    surrogate_prefix="Surrogate",
 ):
-    class_names = list(SURROGATE_CLASS_MAP.keys())
-
     set_standard_backward_in_surrogates_(
         module,
-        class_names=class_names,
+        classes=SURROGATE_CLASSES,
         standard_backward=standard_backward,
-        surrogate_prefix=surrogate_prefix,
     )
