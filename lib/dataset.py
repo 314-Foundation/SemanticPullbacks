@@ -9,25 +9,26 @@ MEAN = [0.485, 0.456, 0.406]
 STD = [0.229, 0.224, 0.225]
 
 # https://gist.github.com/yrevar/942d3a0ac09ec9e5eb3a "text: imagenet 1000 class idx to human readable labels (Fox, E ..."
-IMAGENETTE_TO_IMAGENET = {
-    0: 0,  # tench
-    1: 217,  # English springer
-    2: 482,  # cassette player
-    3: 491,  # chain saw
-    4: 497,  # church
-    5: 566,  # French horn
-    6: 569,  # garbage truck
-    7: 571,  # gas pump
-    8: 574,  # golf ball
-    9: 701,  # parachute
-}
+IMAGENETTE_TO_IMAGENET = [
+    0,  # tench
+    217,  # English springer
+    482,  # cassette player
+    491,  # chain saw
+    497,  # church
+    566,  # French horn
+    569,  # garbage truck
+    571,  # gas pump
+    574,  # golf ball
+    701,  # parachute
+]
 
 
 class ImagenetToImagenetteHead(nn.Module):
     def __init__(self):
         super().__init__()
-        idx = [IMAGENETTE_TO_IMAGENET[i] for i in range(len(IMAGENETTE_TO_IMAGENET))]
-        self.register_buffer("imagenet_indices", torch.tensor(idx, dtype=torch.long))
+        self.register_buffer(
+            "imagenet_indices", torch.tensor(IMAGENETTE_TO_IMAGENET, dtype=torch.long)
+        )
 
     def forward(self, logits_imagenet: torch.Tensor) -> torch.Tensor:
         return logits_imagenet.index_select(dim=-1, index=self.imagenet_indices)
