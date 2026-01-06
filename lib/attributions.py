@@ -5,7 +5,7 @@ from lib.pga import PGA
 from lib.surrogates import set_module_standard_backward_, soften_module_inplace_
 
 
-class LocalGradientAscent:
+class GradientAscentDiff:
     def __init__(
         self,
         model,
@@ -31,7 +31,7 @@ class LocalGradientAscent:
         return attributions
 
 
-class LocalRelevanceAscent(LocalGradientAscent):
+class PullbackAscentDiff(GradientAscentDiff):
     # NOTE: This modifies the model IN PLACE, but should not affect forward nor backward passes, as we leave standard_backward=True
     def __init__(
         self,
@@ -64,7 +64,7 @@ class LocalRelevanceAscent(LocalGradientAscent):
 # TODO: PGA assumes images are in [-1,1], so we may need to add normalization here?
 
 
-def quantus_local_gradient_ascent_explain_func(
+def quantus_gradient_ascent_diff_explain_func(
     model,
     inputs,
     targets,
@@ -91,7 +91,7 @@ def quantus_local_gradient_ascent_explain_func(
     if isinstance(targets, np.ndarray):
         targets = torch.as_tensor(targets, device=device)
 
-    lga = LocalGradientAscent(
+    lga = GradientAscentDiff(
         model,
         **pga_kwargs,
     )
@@ -99,7 +99,7 @@ def quantus_local_gradient_ascent_explain_func(
     return attributions.detach().cpu().numpy()
 
 
-def quantus_local_relevance_ascent_explain_func(
+def quantus_soft_pullback_ascent_diff_explain_func(
     model,
     inputs,
     targets,
@@ -128,7 +128,7 @@ def quantus_local_relevance_ascent_explain_func(
     if isinstance(targets, np.ndarray):
         targets = torch.as_tensor(targets, device=device)
 
-    lga = LocalRelevanceAscent(
+    lga = PullbackAscentDiff(
         model,
         temperatures=temperatures,
         **pga_kwargs,

@@ -289,7 +289,7 @@ SURROGATE_CLASS_MAP = {
     nn.ReLU: (SurrogateReLU, 0.3),
     nn.SiLU: (SurrogateSiLU, 1.6),
     nn.GELU: (SurrogateGELU, 1.0),
-    nn.MaxPool2d: (SurrogateMaxPool2d, 0.3),
+    nn.MaxPool2d: (SurrogateMaxPool2d, 0.2),
     LayerNorm2d: (SurrogateLayerNorm2d, None),
     nn.LayerNorm: (SurrogateLayerNorm, None),
     PVTAttention: (SurrogatePVTAttention, 1.2),
