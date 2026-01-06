@@ -75,6 +75,7 @@ class PGA(Attack):
 
         for _ in range(self.steps):
             adv_images.requires_grad = True
+            # self.model.zero_grad() # not needed since we use torch.autograd.grad
             outputs = self.get_logits(adv_images)
 
             # Calculate loss
@@ -84,6 +85,7 @@ class PGA(Attack):
                 cost = -self.compute_loss(outputs, labels)
 
             # Update adversarial images
+            # Note that this can be non-deterministic on CUDA (if the deterministic flag is not set globally)
             grad = torch.autograd.grad(
                 cost, adv_images, retain_graph=False, create_graph=False
             )[0]
@@ -123,5 +125,7 @@ class PGA(Attack):
                 adv_images = images + delta
 
             self.clip_images_(adv_images)
+
+        # self.model.zero_grad()
 
         return adv_images
