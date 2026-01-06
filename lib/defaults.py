@@ -8,7 +8,7 @@ def get_default_kwargs():
         nn.ReLU: 0.3,
         nn.SiLU: 1.6,
         nn.GELU: 1.0,
-        nn.MaxPool2d: 0.2,
+        nn.MaxPool2d: 0.3,
         # nn.LayerNorm: None,
         # LayerNorm2d: None,
         nn.MultiheadAttention: 1.0,

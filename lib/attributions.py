@@ -99,7 +99,7 @@ def quantus_gradient_ascent_diff_explain_func(
     return attributions.detach().cpu().numpy()
 
 
-def quantus_soft_pullback_ascent_diff_explain_func(
+def quantus_pullback_ascent_diff_explain_func(
     model,
     inputs,
     targets,
