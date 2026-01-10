@@ -1,3 +1,5 @@
+from typing import Optional
+
 import matplotlib.pyplot as plt
 import torch
 import torchvision.utils as vutils
@@ -9,7 +11,9 @@ def plot_example_grid(
     nrow=4,
     column_titles=None,
     cmap=None,
+    scale_each: bool = True,
     normalize=True,
+    value_range: Optional[tuple[int, int]] = None,
     renormalize_fn=None,
     title=None,
     figsize=None,
@@ -23,14 +27,26 @@ def plot_example_grid(
     """
     X = X.detach().cpu()
 
+    # work around the make_grid expanding the image to 3 channels
+    map_to_one_channel = (X.shape[1] == 1) and (cmap is not None)
+
     if renormalize_fn:
         X = renormalize_fn(X)
         normalize = False
 
     grid = vutils.make_grid(
-        X, nrow=nrow, normalize=normalize, scale_each=True, padding=2
+        X,
+        nrow=nrow,
+        normalize=normalize,
+        value_range=value_range,
+        scale_each=scale_each,
+        padding=2,
     )
-    npimg = grid.permute(1, 2, 0).numpy()
+
+    npimg = grid.permute(1, 2, 0)
+    if map_to_one_channel:
+        npimg = npimg.mean(dim=-1, keepdim=True)
+    npimg = npimg.numpy()
 
     H, W = npimg.shape[:2]
     img_h = H // (len(X) // nrow)
@@ -59,6 +75,72 @@ def plot_example_grid(
         plt.savefig(save_path, bbox_inches="tight", pad_inches=0)
     else:
         plt.show()
+
+
+def squeeze_channels(
+    attributions: torch.Tensor,
+    mode="mean",
+) -> torch.Tensor:
+    if mode == "mean":
+        attributions = torch.mean(attributions, dim=1, keepdim=True)
+    elif mode == "sum":
+        attributions = torch.sum(attributions, dim=1, keepdim=True)
+    elif mode == "abs_mean":
+        attributions = torch.mean(torch.abs(attributions), dim=1, keepdim=True)
+    elif mode == "norm":
+        attributions = torch.norm(attributions, dim=1, keepdim=True)
+    else:
+        raise ValueError(f"Unknown mode {mode} for squeeze_channels")
+
+    return attributions
+
+
+def normalise_by_negative_batch(a: torch.Tensor) -> torch.Tensor:
+    """
+    Normalise a batch of images/tensors between [-1, 1] per image using flatten/unflatten.
+
+    Parameters
+    ----------
+    a: torch.Tensor
+        Batch of images/tensors, e.g., shape (B, C, H, W).
+
+    Returns
+    -------
+    torch.Tensor
+        Normalized batch, same shape as input.
+    """
+    shape = a.shape
+    B = shape[0]
+    rest_shape = shape[1:]
+    a_flat = a.flatten(1)  # shape: (B, N)
+
+    a_max = a_flat.max(dim=1, keepdim=True)[0]
+    a_min = a_flat.min(dim=1, keepdim=True)[0]
+
+    mask_zero = (a_max == 0) & (a_min == 0)
+    mask_pos = a_min > 0
+    mask_neg = a_max < 0
+    mask_mix = (a_min < 0) & (a_max > 0)
+
+    out_flat = torch.zeros_like(a_flat)
+    out_flat = torch.where(mask_pos, a_flat / a_max.clamp(min=1e-8), out_flat)
+    out_flat = torch.where(mask_neg, -a_flat / a_min.clamp(max=-1e-8), out_flat)
+
+    # Mixed sign case: normalize positive and negative parts separately
+    if mask_mix.any():
+        # For each batch element, apply only where mask_mix is True
+        pos = (a_flat > 0).float()
+        neg = (a_flat < 0).float()
+        # Avoid division by zero
+        a_max_safe = a_max.clone()
+        a_max_safe[a_max_safe == 0] = 1e-8
+        a_min_safe = a_min.clone()
+        a_min_safe[a_min_safe == 0] = -1e-8
+        mixed_val = pos * (a_flat / a_max_safe) - neg * (a_flat / a_min_safe)
+        out_flat = torch.where(mask_mix, mixed_val, out_flat)
+
+    out = out_flat.unflatten(1, rest_shape)
+    return out
 
 
 def plot_function(

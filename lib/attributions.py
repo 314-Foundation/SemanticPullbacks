@@ -1,6 +1,7 @@
 import numpy as np
 import torch
 
+from lib.helpers import squeeze_channels
 from lib.pga import PGA
 from lib.surrogates import set_module_standard_backward_, soften_module_inplace_
 
@@ -9,6 +10,7 @@ class GradientAscentDiff:
     def __init__(
         self,
         model,
+        squeeze_channel_mode=None,
         **pga_kwargs,
     ):
         self.model = model
@@ -17,16 +19,28 @@ class GradientAscentDiff:
             **pga_kwargs,
         )
         self.atk.set_mode_targeted_by_label()
+        self.squeeze_channel_mode = squeeze_channel_mode
 
     def attribute(self, inputs, target):
-        inputs = inputs.to(self.atk.device)
-        target = target.to(self.atk.device)
+        if isinstance(inputs, np.ndarray):
+            device = next(self.model.parameters()).device
+            inputs = torch.as_tensor(inputs, device=device)
+            target = torch.as_tensor(target, device=device)
+        else:
+            inputs = inputs.to(self.atk.device)
+            target = target.to(self.atk.device)
 
         adv_inputs = self.atk(inputs, target)
 
         attributions = (
             adv_inputs - inputs
         )  # if clip_margin is not None, then usually grad != (adv_images - images) due to the clipping!
+
+        if self.squeeze_channel_mode is not None:
+            attributions = squeeze_channels(
+                attributions,
+                mode=self.squeeze_channel_mode,
+            )
 
         return attributions
 
@@ -37,10 +51,12 @@ class PullbackAscentDiff(GradientAscentDiff):
         self,
         model,
         temperatures,
+        squeeze_channel_mode=None,
         **pga_kwargs,
     ):
         super().__init__(
             model,
+            squeeze_channel_mode=squeeze_channel_mode,
             **pga_kwargs,
         )
 
@@ -68,6 +84,7 @@ def quantus_gradient_ascent_diff_explain_func(
     model,
     inputs,
     targets,
+    sequeeze_channel_mode=None,
     device=None,
     **pga_kwargs,
 ):
@@ -93,6 +110,7 @@ def quantus_gradient_ascent_diff_explain_func(
 
     lga = GradientAscentDiff(
         model,
+        sequeeze_channel_mode=sequeeze_channel_mode,
         **pga_kwargs,
     )
     attributions = lga.attribute(inputs, targets)
@@ -104,6 +122,7 @@ def quantus_pullback_ascent_diff_explain_func(
     inputs,
     targets,
     temperatures,
+    squeeze_channel_mode=None,
     device=None,
     **pga_kwargs,
 ):
@@ -131,6 +150,7 @@ def quantus_pullback_ascent_diff_explain_func(
     lga = PullbackAscentDiff(
         model,
         temperatures=temperatures,
+        squeeze_channel_mode=squeeze_channel_mode,
         **pga_kwargs,
     )
     attributions = lga.attribute(inputs, targets)
