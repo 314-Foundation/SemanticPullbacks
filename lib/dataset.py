@@ -64,11 +64,13 @@ class ImageNetNormalize(nn.Module):
 class FromMyNormalizeToImageNet(nn.Module):
     def __init__(self):
         super().__init__()
-        self.imagenet_norm = ImageNetNormalize()
+        # self.imagenet_norm = ImageNetNormalize()
+        self.mean = MEAN
+        self.std = STD
 
     def forward(self, x):
         x = (x + 1) / 2  # Map from [-1,1] to [0,1]
-        return self.imagenet_norm(x)
+        return T.functional.normalize(x, self.mean, self.std, inplace=False)
 
 
 def get_transform():

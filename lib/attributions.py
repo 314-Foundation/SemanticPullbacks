@@ -46,11 +46,10 @@ class GradientAscentDiff:
 
 
 class PullbackAscentDiff(GradientAscentDiff):
-    # NOTE: This modifies the model IN PLACE, but should not affect forward nor backward passes, as we leave standard_backward=True
     def __init__(
         self,
         model,
-        temperatures,
+        temperatures=None,
         squeeze_channel_mode=None,
         **pga_kwargs,
     ):
@@ -59,15 +58,20 @@ class PullbackAscentDiff(GradientAscentDiff):
             squeeze_channel_mode=squeeze_channel_mode,
             **pga_kwargs,
         )
-
         self.temperatures = temperatures
-        soften_module_inplace_(self.model, temperatures=self.temperatures)
-        set_module_standard_backward_(
-            self.model, standard_backward=True
-        )  # don't change the model behavior!
 
     def attribute(self, inputs, target):
-        set_module_standard_backward_(self.model, standard_backward=False)
+        if self.temperatures is not None:
+            # NOTE: This modifies the model IN PLACE,
+            # but should not affect forward nor backward passes,
+            # as we leave standard_backward=True
+            soften_module_inplace_(
+                self.model,
+                temperatures=self.temperatures,
+                standard_backward=False,
+            )
+        else:
+            set_module_standard_backward_(self.model, standard_backward=False)
 
         attributions = super().attribute(inputs, target)
 
@@ -121,7 +125,7 @@ def quantus_pullback_ascent_diff_explain_func(
     model,
     inputs,
     targets,
-    temperatures,
+    temperatures=None,
     squeeze_channel_mode=None,
     device=None,
     **pga_kwargs,

@@ -272,7 +272,7 @@ class SurrogatePVTAttention(SurrogateModule, PVTAttention):
             soft_attn = self.attn_drop(soft_attn)
 
             attn = attn.detach()
-            soft_attn = soft_attn.detach()
+            # soft_attn = soft_attn.detach()
 
             x = attn @ v
             soft_x = soft_attn @ v
@@ -299,6 +299,7 @@ SURROGATE_BASE_CLASSES = tuple(SURROGATE_CLASS_MAP.keys())
 
 
 def extract_base_class(module):
+    # module can be a surrogate child class already
     for cls in SURROGATE_BASE_CLASSES:
         if isinstance(module, cls):
             return cls
@@ -307,6 +308,7 @@ def extract_base_class(module):
 def replace_modules_with_surrogates_(
     module,
     temperatures,
+    standard_backward=False,
 ):
     for name, child in module.named_children():
         base_cls = extract_base_class(child)
@@ -319,12 +321,13 @@ def replace_modules_with_surrogates_(
                 surrogate_cls.replace_class_with_surrogate(
                     child,
                     temperature=temperatures[base_cls],
-                    standard_backward=False,
+                    standard_backward=standard_backward,
                 )
 
         replace_modules_with_surrogates_(
             child,
             temperatures=temperatures,
+            standard_backward=standard_backward,
         )
 
 
@@ -351,6 +354,7 @@ def set_standard_backward_in_surrogates_(
 def soften_module_inplace_(
     module,
     temperatures=None,
+    standard_backward=False,
 ):
     base_temperatures = {key: val[1] for key, val in SURROGATE_CLASS_MAP.items()}
     if temperatures is not None:
@@ -359,6 +363,7 @@ def soften_module_inplace_(
     replace_modules_with_surrogates_(
         module,
         temperatures=base_temperatures,
+        standard_backward=standard_backward,
     )
 
 

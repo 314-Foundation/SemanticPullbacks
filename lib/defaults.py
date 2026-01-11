@@ -43,6 +43,9 @@ def get_default_kwargs():
         "alpha": 1.0,
         "steps": 10,
         "use_cross_entropy_loss": True,
+        "relative_alpha": False,
+        "normalize_step": True,
+        "clip_margin": 0.0,
     }
 
     return temperatures, pga_kwargs_multi, pga_kwargs_grad, pga_kwargs_adv

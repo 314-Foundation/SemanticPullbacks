@@ -11,12 +11,17 @@ def get_target_list(preds, n_classes):
     return ret
 
 
-def evaluate_response_faithfulness(attribution_method, images, preds, n_classes=10):
+def evaluate_response_faithfulness(
+    attribution_method, images, preds, n_classes=10, attribute_kwargs=None
+):
+    if attribute_kwargs is None:
+        attribute_kwargs = {}
     attributions = []
     target_list = get_target_list(preds, n_classes=n_classes)
     for target in target_list:
-        attributions.append(attribution_method.attribute(images, target=target))
-
+        attributions.append(
+            attribution_method.attribute(images, target=target, **attribute_kwargs)
+        )
     attributions = torch.stack(attributions, dim=1)  # (batch_size, n_classes, C, H, W)
 
     scores = einsum("bchw, bnchw -> bn", images, attributions)
