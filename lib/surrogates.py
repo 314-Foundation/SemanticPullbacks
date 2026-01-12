@@ -272,7 +272,7 @@ class SurrogatePVTAttention(SurrogateModule, PVTAttention):
             soft_attn = self.attn_drop(soft_attn)
 
             attn = attn.detach()
-            # soft_attn = soft_attn.detach()
+            soft_attn = soft_attn.detach()
 
             x = attn @ v
             soft_x = soft_attn @ v

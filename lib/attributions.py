@@ -88,7 +88,7 @@ def quantus_gradient_ascent_diff_explain_func(
     model,
     inputs,
     targets,
-    sequeeze_channel_mode=None,
+    squeeze_channel_mode=None,
     device=None,
     **pga_kwargs,
 ):
@@ -112,12 +112,12 @@ def quantus_gradient_ascent_diff_explain_func(
     if isinstance(targets, np.ndarray):
         targets = torch.as_tensor(targets, device=device)
 
-    lga = GradientAscentDiff(
+    gad = GradientAscentDiff(
         model,
-        sequeeze_channel_mode=sequeeze_channel_mode,
+        squeeze_channel_mode=squeeze_channel_mode,
         **pga_kwargs,
     )
-    attributions = lga.attribute(inputs, targets)
+    attributions = gad.attribute(inputs, targets)
     return attributions.detach().cpu().numpy()
 
 
@@ -151,11 +151,11 @@ def quantus_pullback_ascent_diff_explain_func(
     if isinstance(targets, np.ndarray):
         targets = torch.as_tensor(targets, device=device)
 
-    lga = PullbackAscentDiff(
+    pad = PullbackAscentDiff(
         model,
         temperatures=temperatures,
         squeeze_channel_mode=squeeze_channel_mode,
         **pga_kwargs,
     )
-    attributions = lga.attribute(inputs, targets)
+    attributions = pad.attribute(inputs, targets)
     return attributions.detach().cpu().numpy()
