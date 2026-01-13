@@ -97,6 +97,7 @@ class SurrogateSiLU(SurrogateActivation, nn.SiLU):
 
 class SurrogateGELU(SurrogateActivation, nn.GELU):
     def backward_gradient(self, x):
+        # return F.sigmoid(x / self.temperature)
         return normal_cdf(x, self.temperature)
 
         # approximate expected gating
@@ -198,7 +199,6 @@ class SurrogateMultiheadAttention(SurrogateModule, nn.MultiheadAttention):
         if self.standard_backward:
             return orig, attn_weights
 
-        # we need to pass graidients through all the QKV terms to properly backpropagate the relevance so we don't detach them
         # query = query.detach()
         # key = key.detach()
         # value = value.detach()
@@ -292,8 +292,8 @@ SURROGATE_CLASS_MAP = {
     nn.MaxPool2d: (SurrogateMaxPool2d, 0.3),
     LayerNorm2d: (SurrogateLayerNorm2d, None),
     nn.LayerNorm: (SurrogateLayerNorm, None),
-    PVTAttention: (SurrogatePVTAttention, 1.2),
-    nn.MultiheadAttention: (SurrogateMultiheadAttention, 1.2),
+    PVTAttention: (SurrogatePVTAttention, 1.0),
+    nn.MultiheadAttention: (SurrogateMultiheadAttention, 1.0),
 }
 SURROGATE_BASE_CLASSES = tuple(SURROGATE_CLASS_MAP.keys())
 
