@@ -113,7 +113,7 @@ def get_imagenette(download=False):
         size="160px",  # can also be "320" or "full"
         download=download,
         transform=ConditionalTransform(),
-        # target_transform=imagenette_label_to_imagenet,
+        target_transform=imagenette_label_to_imagenet,
     )
 
 
@@ -128,8 +128,8 @@ def get_imagenet():
 
 def get_examples(loader, all_classes=False):
     class_indices = list(range(10)) if all_classes else [0, 2, 4, 6, 8]
-    # target_classes = [imagenette_label_to_imagenet(l) for l in class_indices]
-    target_classes = class_indices
+    target_classes = [imagenette_label_to_imagenet(l) for l in class_indices]
+    # target_classes = class_indices
 
     selected = {}
     seen_classes = set()
@@ -155,4 +155,5 @@ def get_examples(loader, all_classes=False):
 
 def wrap_imagenet_model(model):
     # return nn.Sequential(ImageNetNormalize(), model, ImagenetToImagenetteHead())
-    return nn.Sequential(FromMyNormalizeToImageNet(), model, ImagenetToImagenetteHead())
+    # return nn.Sequential(FromMyNormalizeToImageNet(), model, ImagenetToImagenetteHead())
+    return nn.Sequential(FromMyNormalizeToImageNet(), model)

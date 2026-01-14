@@ -11,6 +11,7 @@ def get_target_list(preds, n_classes):
     return ret
 
 
+# NOTE: This requires lib.dataset.ImagenetToImagenetteHead to be used in the model wrapper!
 def evaluate_response_faithfulness(
     attribution_method, images, preds, n_classes=10, attribute_kwargs=None
 ):

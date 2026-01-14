@@ -19,12 +19,17 @@ def plot_example_grid(
     figsize=None,
     save_path=None,
     dpi=80,
+    heatmap=False,
 ):
     """
     X: tensor (B, C, H, W)
     nrow: number of images in each row
     column_titles: list of str - only if B is a multiple of nrow
     """
+    if heatmap:
+        X = squeeze_channels(X, mode="mean")
+        X = normalise_by_negative_batch(X)
+
     X = X.detach().cpu()
 
     # work around the make_grid expanding the image to 3 channels

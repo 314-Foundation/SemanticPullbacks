@@ -313,7 +313,7 @@ def replace_modules_with_surrogates_(
     for name, child in module.named_children():
         base_cls = extract_base_class(child)
 
-        if base_cls is not None:
+        if base_cls in temperatures:
             if isinstance(child, SurrogateModule):
                 child.temperature = temperatures[base_cls]
             else:
@@ -334,15 +334,14 @@ def replace_modules_with_surrogates_(
 def set_standard_backward_in_surrogates_(
     module,
     classes,
-    standard_backward=False,
+    standard_backward=True,
 ):
     for name, child in module.named_children():
         base_cls = extract_base_class(child)
 
-        if base_cls is not None:
+        if base_cls in classes:
             if isinstance(child, SurrogateModule):
-                if base_cls in classes:
-                    child.standard_backward = standard_backward
+                child.standard_backward = standard_backward
 
         set_standard_backward_in_surrogates_(
             child,
@@ -354,22 +353,27 @@ def set_standard_backward_in_surrogates_(
 def soften_module_inplace_(
     module,
     temperatures=None,
-    standard_backward=False,
+    standard_backward=True,
+    fill_default_temperatures=True,
 ):
-    base_temperatures = {key: val[1] for key, val in SURROGATE_CLASS_MAP.items()}
-    if temperatures is not None:
-        base_temperatures.update(temperatures)
+    if temperatures is None:
+        temperatures = {}
+
+    if fill_default_temperatures:
+        temperatures = {key: val[1] for key, val in SURROGATE_CLASS_MAP.items()}.update(
+            temperatures
+        )
 
     replace_modules_with_surrogates_(
         module,
-        temperatures=base_temperatures,
+        temperatures=temperatures,
         standard_backward=standard_backward,
     )
 
 
 def set_module_standard_backward_(
     module,
-    standard_backward=False,
+    standard_backward=True,
 ):
     set_standard_backward_in_surrogates_(
         module,
