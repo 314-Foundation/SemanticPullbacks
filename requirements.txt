@@ -1,6 +1,6 @@
 # torch
 # torchvision
-# ipykernel
+ipykernel
 torchattacks
 spaces
 gradio
