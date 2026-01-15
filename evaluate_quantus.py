@@ -54,13 +54,21 @@ def main(args):
     )
     results = evaluator.evaluate_loader(loader, n_batches=args.n_batches)
 
+    output_file = f"{args.output_file}_model_name={args.model_name}"
     df = evaluator.as_dataframe(results)
-    evaluator.save_results(df, args.output_file)
-    print(f"Results saved to {args.output_file}")
+    evaluator.save_results(df, output_file)
+    print(f"Results saved to {output_file}")
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--output_file",
+        type=str,
+        required=True,
+        help="Path to save the results CSV file. Don't include .pkl extension nor the model name.",
+    )
+
     parser.add_argument("--model_name", type=str, required=False, default="resnet50")
     parser.add_argument(
         "--model_source",
@@ -69,7 +77,6 @@ if __name__ == "__main__":
         default="torchvision",
         choices=["torchvision", "timm"],
     )
-    parser.add_argument("--output_file", type=str, required=True)
     parser.add_argument("--batch_size", type=int, required=False, default=10)
     parser.add_argument("--n_batches", type=int, required=False, default=2)
     parser.add_argument(

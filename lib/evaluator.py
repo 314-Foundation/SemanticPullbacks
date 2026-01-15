@@ -135,9 +135,9 @@ def default_metrics(filter_metrics=None):
     # "pixel_flipping"  # Good
     # "infidelity"
     # "avg_sensitivity"  # Very Good
-    # "max_sensitivity"
-    # "sparseness"
-    # "random_logit"
+    # "max_sensitivity"  # Very Good
+    # "sparseness"  # Good
+    # "random_logit"  # Similar to other explainers
 
 
 class QuantusEvaluator:
