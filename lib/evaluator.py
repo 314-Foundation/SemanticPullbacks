@@ -22,6 +22,13 @@ def default_explainers(filter_explainers=None):
         "DoublePullback": (
             quantus_double_pullback_ascent_diff_explain_func,
             {
+                "pga_kwargs_1": pga_kwargs_grad,
+                "pga_kwargs_2": pga_kwargs_grad,
+            },
+        ),
+        "DoublePullbackBis": (
+            quantus_double_pullback_ascent_diff_explain_func,
+            {
                 "pga_kwargs_1": {**pga_kwargs_grad, "alpha": 2},
                 "pga_kwargs_2": pga_kwargs_grad,
             },
@@ -108,13 +115,13 @@ def default_metrics(filter_metrics=None):
             # normalise=True,
         ),
         "random_logit": quantus.RandomLogit(
-            num_classes=10,
+            num_classes=1000,
             # abs=True,
-            seed=42,
-            normalise=False,
+            # seed=42,
+            # normalise=False,
             # similarity_func=cosine,
-            similarity_func=quantus.similarity_func.ssim,
-            # similarity_func=quantus.similarity_func.correlation_pearson,
+            # similarity_func=quantus.similarity_func.ssim,
+            similarity_func=quantus.similarity_func.correlation_pearson,
         ),
     }
 
@@ -202,6 +209,8 @@ class QuantusEvaluator:
         all_results = {}
         for batch_idx, (x_batch, y_batch) in enumerate(data_loader):
 
+            print(f"Evaluating batch {batch_idx + 1}/{n_batches}")
+
             x_batch = x_batch.numpy()
             y_batch = y_batch.numpy()
 
@@ -255,6 +264,7 @@ class QuantusEvaluator:
 
             mean = trim(arr.mean())
             std = trim(arr.std())
-            return f"{mean}±{std}"
+            return f"{mean}\u00b1{std}"
 
-        return df.applymap(format_mean_std)
+        return df.map(format_mean_std)
+        # return df.applymap(format_mean_std)

@@ -2,4 +2,4 @@
 __pycache__/
 data/
 
-quantus_results_resnet50.pkl
+quantus_results_resnet50_100_examples.pkl

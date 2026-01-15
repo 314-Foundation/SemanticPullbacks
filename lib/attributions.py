@@ -18,7 +18,7 @@ class GradientAscentDiff:
             self.model,
             **pga_kwargs,
         )
-        self.atk.set_mode_targeted_by_label()
+        self.atk.set_mode_targeted_by_label(quiet=True)
         self.squeeze_channel_mode = squeeze_channel_mode
 
     def attribute(self, inputs, target):
