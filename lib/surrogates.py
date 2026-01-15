@@ -360,9 +360,9 @@ def soften_module_inplace_(
         temperatures = {}
 
     if fill_default_temperatures:
-        temperatures = {key: val[1] for key, val in SURROGATE_CLASS_MAP.items()}.update(
-            temperatures
-        )
+        temperatures = {
+            key: val[1] for key, val in SURROGATE_CLASS_MAP.items()
+        } | temperatures
 
     replace_modules_with_surrogates_(
         module,

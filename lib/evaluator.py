@@ -13,7 +13,7 @@ from lib.attributions import (
 from lib.defaults import get_default_kwargs
 
 
-def get_default_explainers(filter_explainers=None):
+def default_explainers(filter_explainers=None):
     temperatures, pga_kwargs_counterfactual, pga_kwargs_grad, pga_kwargs_adv = (
         get_default_kwargs()
     )
@@ -44,7 +44,7 @@ def get_default_explainers(filter_explainers=None):
     return explainers
 
 
-def get_default_metrics(filter_metrics=None):
+def default_metrics(filter_metrics=None):
     metrics = {
         "faithfulness_correlation": quantus.FaithfulnessCorrelation(
             nr_runs=100,
@@ -146,8 +146,7 @@ class QuantusEvaluator:
             explain_func,
             explain_func_kwargs,
         ) in self.explainers.items():
-            gc.collect()
-            torch.cuda.empty_cache()
+            self.empty_cache()
 
             self.attributions[explainer_name] = explain_func(
                 self.model, x_batch, y_batch, device=self.device, **explain_func_kwargs
@@ -164,6 +163,10 @@ class QuantusEvaluator:
         if type(a_batch) is torch.Tensor:
             a_batch = a_batch.cpu().numpy()
 
+        print(
+            f"Evaluating metric {metric.__class__.__name__} with explainer {explainer_name}"
+        )
+
         scores = metric(
             model=self.model,
             x_batch=x_batch,
@@ -171,7 +174,7 @@ class QuantusEvaluator:
             a_batch=a_batch,
             device=self.device,
             explain_func=explain_func,
-            explain_func_kwargs=explain_func_kwargs,
+            explain_func_kwargs={**explain_func_kwargs},  # metrics may modify kwargs
         )
         # scores = torch.as_tensor(scores).float()
         return scores
@@ -186,11 +189,12 @@ class QuantusEvaluator:
         for metric_name, metric in self.metrics.items():
             results[metric_name] = {}
             for explainer_name in self.explainers.keys():
-                gc.collect()
-                torch.cuda.empty_cache()
+                self.empty_cache()
 
                 scores = self.evaluate_metric(metric, explainer_name, x_batch, y_batch)
                 results[metric_name][explainer_name] = scores
+
+        self.empty_cache()
 
         return results
 
@@ -198,8 +202,8 @@ class QuantusEvaluator:
         all_results = {}
         for batch_idx, (x_batch, y_batch) in enumerate(data_loader):
 
-            x_batch = x_batch.to(self.device)
-            y_batch = y_batch.to(self.device)
+            x_batch = x_batch.numpy()
+            y_batch = y_batch.numpy()
 
             batch_results = self.evaluate_batch(
                 x_batch, y_batch, precompute_attributions=True
@@ -217,6 +221,11 @@ class QuantusEvaluator:
                 break
 
         return all_results
+
+    @staticmethod
+    def empty_cache():
+        gc.collect()
+        torch.cuda.empty_cache()
 
     @staticmethod
     def as_dataframe(all_results: Dict[str, Dict[str, list]]) -> pd.DataFrame:

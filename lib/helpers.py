@@ -29,6 +29,8 @@ def plot_example_grid(
     if heatmap:
         X = squeeze_channels(X, mode="mean")
         X = normalise_by_negative_batch(X)
+        if cmap is None:
+            cmap = "seismic"
 
     X = X.detach().cpu()
 
