@@ -90,6 +90,34 @@ def default_metrics(filter_metrics=None):
             perturb_patch_sizes=[56],
             display_progressbar=True,
         ),
+        # TODO: play around with these metrics later, understand them better
+        # "region_perturbation": quantus.RegionPerturbation(
+        #     patch_size=14,
+        #     regions_evaluation=50,
+        #     perturb_baseline="black",
+        #     normalise=True,
+        # ),
+        # "selectivity": quantus.Selectivity(
+        #     patch_size=56,
+        #     perturb_baseline="black",
+        # ),
+        # "sensitivity_n": quantus.SensitivityN(
+        #     # features_in_step=224,
+        #     features_in_step=12544 // 4,
+        #     n_max_percentage=0.8,
+        #     # similarity_func=quantus.similarity_func.correlation_pearson,
+        #     # perturb_func=quantus.perturb_func.baseline_replacement_by_indices,
+        #     perturb_baseline="black",
+        #     return_aggregate=False,
+        #     # abs=True,
+        # ),
+        # TODO: fix these metrics as they cause errors
+        # "IROF": quantus.IROF(),
+        # "road": quantus.ROAD(),
+        # "sufficiency": quantus.Sufficiency(
+        #     threshold=0.6,
+        #     return_aggregate=False,
+        # ),
         "avg_sensitivity": quantus.AvgSensitivity(
             nr_samples=10,
             # lower_bound=0.2,
@@ -159,7 +187,8 @@ class QuantusEvaluator:
                 self.model, x_batch, y_batch, device=self.device, **explain_func_kwargs
             )
 
-    def evaluate_metric(self, metric, explainer_name, x_batch, y_batch) -> list:
+    def evaluate_metric(self, metric_name, explainer_name, x_batch, y_batch) -> list:
+        metric = self.metrics[metric_name]
         explain_func, explain_func_kwargs = self.explainers[explainer_name]
         a_batch = self.attributions[explainer_name]
 
@@ -170,9 +199,7 @@ class QuantusEvaluator:
         if type(a_batch) is torch.Tensor:
             a_batch = a_batch.cpu().numpy()
 
-        print(
-            f"Evaluating metric {metric.__class__.__name__} with explainer {explainer_name}"
-        )
+        print(f"Evaluating metric {metric_name} with explainer {explainer_name}")
 
         scores = metric(
             model=self.model,
@@ -198,7 +225,9 @@ class QuantusEvaluator:
             for explainer_name in self.explainers.keys():
                 self.empty_cache()
 
-                scores = self.evaluate_metric(metric, explainer_name, x_batch, y_batch)
+                scores = self.evaluate_metric(
+                    metric_name, explainer_name, x_batch, y_batch
+                )
                 results[metric_name][explainer_name] = scores
 
         self.empty_cache()
