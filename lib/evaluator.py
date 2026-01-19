@@ -296,4 +296,3 @@ class QuantusEvaluator:
             return f"{mean}\u00b1{std}"
 
         return df.map(format_mean_std)
-        # return df.applymap(format_mean_std)

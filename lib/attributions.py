@@ -126,10 +126,8 @@ def quantus_gradient_ascent_diff_explain_func(
     else:
         model.to(device)
 
-    if isinstance(inputs, np.ndarray):
-        inputs = torch.as_tensor(inputs, device=device)
-    if isinstance(targets, np.ndarray):
-        targets = torch.as_tensor(targets, device=device)
+    inputs = torch.as_tensor(inputs, device=device)
+    targets = torch.as_tensor(targets, device=device)
 
     gad = GradientAscentDiff(
         model,
@@ -165,10 +163,8 @@ def quantus_pullback_ascent_diff_explain_func(
     else:
         model.to(device)
 
-    if isinstance(inputs, np.ndarray):
-        inputs = torch.as_tensor(inputs, device=device)
-    if isinstance(targets, np.ndarray):
-        targets = torch.as_tensor(targets, device=device)
+    inputs = torch.as_tensor(inputs, device=device)
+    targets = torch.as_tensor(targets, device=device)
 
     pad = PullbackAscentDiff(
         model,
@@ -194,10 +190,8 @@ def quantus_double_pullback_ascent_diff_explain_func(
     else:
         model.to(device)
 
-    if isinstance(inputs, np.ndarray):
-        inputs = torch.as_tensor(inputs, device=device)
-    if isinstance(targets, np.ndarray):
-        targets = torch.as_tensor(targets, device=device)
+    inputs = torch.as_tensor(inputs, device=device)
+    targets = torch.as_tensor(targets, device=device)
 
     dpad = DoublePullbackAscentDiff(
         model,

@@ -21,6 +21,18 @@ IMAGENETTE_TO_IMAGENET = [
     574,  # golf ball
     701,  # parachute
 ]
+CLASS_NAMES = {
+    0: ("tench", "Tinca tinca"),
+    217: ("English springer", "English springer spaniel"),
+    482: ("cassette player",),
+    491: ("chain saw", "chainsaw"),
+    497: ("church", "church building"),
+    566: ("French horn", "horn"),
+    569: ("garbage truck", "dustcart"),
+    571: ("gas pump", "gasoline pump", "petrol pump", "island dispenser"),
+    574: ("golf ball",),
+    701: ("parachute", "chute"),
+}
 
 
 class ImagenetToImagenetteHead(nn.Module):

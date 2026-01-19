@@ -20,6 +20,8 @@ def plot_example_grid(
     save_path=None,
     dpi=80,
     heatmap=False,
+    heatmap_mode="mean",
+    row_titles=None,
 ):
     """
     X: tensor (B, C, H, W)
@@ -27,7 +29,7 @@ def plot_example_grid(
     column_titles: list of str - only if B is a multiple of nrow
     """
     if heatmap:
-        X = squeeze_channels(X, mode="mean")
+        X = squeeze_channels(X, mode=heatmap_mode)
         X = normalise_by_negative_batch(X)
         if cmap is None:
             cmap = "seismic"
@@ -70,7 +72,30 @@ def plot_example_grid(
     if column_titles is not None:
         for i, col_title in enumerate(column_titles):
             x_center = i * img_w + img_w / 2
-            plt.text(x_center, y=-5, s=col_title, fontsize=12, ha="center", va="bottom")
+            # plt.text(x_center, y=-5, s=col_title, fontsize=12, ha="center", va="bottom")
+            plt.text(
+                x_center,
+                y=-5,
+                s=col_title,
+                fontdict={"fontsize": 20},
+                ha="center",
+                va="bottom",
+            )
+
+    # Add row titles
+    if row_titles is not None:
+        n_rows = len(X) // nrow
+        for i, row_title in enumerate(row_titles):
+            y_center = i * img_h + img_h / 2
+            plt.text(
+                x=-10,  # slightly outside the image
+                y=y_center,
+                s=row_title,
+                fontdict={"fontsize": 20},
+                ha="right",
+                va="center",
+                rotation=90,
+            )
 
     if title:
         plt.title(title)
