@@ -40,7 +40,8 @@ def default_explainers(filter_explainers=None):
         "DeepLift": (quantus.explain, {"method": "DeepLift"}),
         "InputXGradient": (quantus.explain, {"method": "InputXGradient"}),
         "Deconvolution": (quantus.explain, {"method": "Deconvolution"}),
-        "GuidedGradCam": (quantus.explain, {"method": "GuidedGradCam"}),
+        # "GuidedGradCam": (quantus.explain, {"method": "GuidedGradCam"}),  # requires additional param
+        # "Lime": (quantus.explain, {"method": "Lime"}),  # way slower than others
     }
 
     if filter_explainers is not None:
