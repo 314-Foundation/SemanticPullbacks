@@ -23,6 +23,7 @@ def plot_example_grid(
     heatmap=False,
     heatmap_mode="mean",
     row_titles=None,
+    fontsize=36,
 ):
     """
     X: tensor (B, C, H, W)
@@ -78,7 +79,7 @@ def plot_example_grid(
                 x_center,
                 y=-5,
                 s=col_title,
-                fontdict={"fontsize": 20},
+                fontdict={"fontsize": fontsize},
                 ha="center",
                 va="bottom",
             )
