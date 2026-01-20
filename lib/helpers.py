@@ -1,6 +1,7 @@
 from typing import Optional
 
 import matplotlib.pyplot as plt
+import numpy as np
 import torch
 import torchvision.utils as vutils
 from torch import nn
@@ -200,6 +201,74 @@ def plot_function(
     plt.legend()
     plt.tight_layout()
     plt.show()
+
+
+def make_2x2_batch_from_classes(x_batch, y_batch, class_list=None):
+    idxs = []
+    if class_list is not None:
+        if len(class_list) != 4:
+            raise ValueError("class_list must have exactly 4 classes!")
+        for cls in class_list:
+            idxs_cls = (y_batch == cls).nonzero(as_tuple=True)[0]
+            if len(idxs_cls) == 0:
+                raise ValueError(f"No image found for class {cls} in the batch!")
+            idxs.append(idxs_cls[0].item())
+    else:
+        unique_classes = torch.unique(y_batch, sorted=False)
+        for cls in unique_classes:
+            idx = (y_batch == cls).nonzero(as_tuple=True)[0][0]
+            idxs.append(idx)
+            if len(idxs) == 4:
+                break
+        if len(idxs) < 4:
+            raise ValueError("Batch must contain at least 4 different classes!")
+
+    idxs = torch.as_tensor(idxs)
+
+    imgs = x_batch[idxs]  # (4, C, H, W)
+    labels = y_batch[idxs]  # (4,)
+    # Arrange 2x2: [0 1]
+    #              [2 3]
+    top = torch.cat([imgs[0], imgs[1]], dim=-1)  # (C, H, 2W)
+    bottom = torch.cat([imgs[2], imgs[3]], dim=-1)  # (C, H, 2W)
+    img_2x2 = torch.cat([top, bottom], dim=-2)  # (C, 2H, 2W)
+    # Repeat 4 times
+    x_out = img_2x2.unsqueeze(0).repeat(4, 1, 1, 1)  # (4, C, 2H, 2W)
+    y_out = labels  # (4,)
+    return x_out, y_out
+
+
+def batched_seismic_rgb(
+    x: torch.Tensor,
+    vmin: float | None = None,
+    vmax: float | None = None,
+):
+    """
+    x: (B, H, W) or (B, 1, H, W)
+    returns: (B, 3, H, W) in [0, 1]
+    """
+    if x.dim() == 4:
+        x = x.squeeze(1)  # (B, H, W)
+
+    if vmin is None:
+        vmin = x.min()
+    if vmax is None:
+        vmax = x.max()
+
+    # normalizacja jak w imshow
+    x_norm = (x - vmin) / (vmax - vmin + 1e-8)
+    x_norm = x_norm.clamp(0.0, 1.0)
+
+    # colormap → LUT
+    cmap = plt.get_cmap("seismic")
+    lut = torch.from_numpy(cmap(torch.linspace(0, 1, 256).numpy())[:, :3])
+    lut = lut.to(x.device).float()  # (256, 3)
+
+    # lookup
+    idx = (x_norm * 255).long().clamp(0, 255)  # (B, H, W)
+    rgb = lut[idx]  # (B, H, W, 3)
+
+    return rgb.permute(0, 3, 1, 2)  # (B, 3, H, W)
 
 
 def show_images(images, adv_images, k=5):
