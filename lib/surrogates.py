@@ -78,7 +78,7 @@ class SurrogateActivation(FGIModule):
 
 class SurrogateReLU(SurrogateActivation, nn.ReLU):
     def backward_gradient(self, x):
-        return F.sigmoid(x / self.temperature)
+        # return F.sigmoid(x / self.temperature)
 
         # approximate expected gating
         return normal_cdf(x, self.temperature)
@@ -97,8 +97,8 @@ class SurrogateSiLU(SurrogateActivation, nn.SiLU):
 
 class SurrogateGELU(SurrogateActivation, nn.GELU):
     def backward_gradient(self, x):
-        # return F.sigmoid(x / self.temperature)
         return normal_cdf(x, self.temperature)
+        # return F.sigmoid(x / self.temperature)
 
         # approximate expected gating
         one = torch.tensor(1.0, device=x.device)
@@ -286,7 +286,7 @@ class SurrogatePVTAttention(SurrogateModule, PVTAttention):
 
 
 SURROGATE_CLASS_MAP = {
-    nn.ReLU: (SurrogateReLU, 0.3),
+    nn.ReLU: (SurrogateReLU, 0.6),
     nn.SiLU: (SurrogateSiLU, 1.6),
     nn.GELU: (SurrogateGELU, 1.0),
     nn.MaxPool2d: (SurrogateMaxPool2d, 0.3),

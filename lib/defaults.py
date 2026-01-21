@@ -5,7 +5,7 @@ from lib.surrogates import LayerNorm2d, PVTAttention
 
 def get_default_kwargs():
     temperatures = {
-        nn.ReLU: 0.3,
+        nn.ReLU: 0.6,
         nn.SiLU: 1.6,
         nn.GELU: 1.0,
         nn.MaxPool2d: 0.3,
@@ -16,8 +16,8 @@ def get_default_kwargs():
     }
     pga_kwargs_counterfactual = {
         "alpha": 20,
-        "steps": 10,
-        # "steps": 5,
+        # "steps": 10,
+        "steps": 5,
         "eps": None,
         # "eps": 100,
         "normalize_step": True,

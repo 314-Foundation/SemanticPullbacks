@@ -33,6 +33,14 @@ def default_explainers(filter_explainers=None):
                 "pga_kwargs_2": pga_kwargs_grad,
             },
         ),
+        "PullbackAscent": (
+            quantus_pullback_ascent_diff_explain_func,
+            pga_kwargs_counterfactual,
+        ),
+        "PullbackAscentBis": (
+            quantus_pullback_ascent_diff_explain_func,
+            {**pga_kwargs_counterfactual, "steps": 10},
+        ),
         "Gradient": (quantus.explain, {"method": "Gradient"}),
         "GradientShap": (quantus.explain, {"method": "GradientShap"}),
         "IntegratedGradients": (quantus.explain, {"method": "IntegratedGradients"}),
