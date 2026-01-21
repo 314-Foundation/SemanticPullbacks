@@ -186,6 +186,12 @@ class QuantusEvaluator:
 
     def precompute_attributions(self, x_batch, y_batch):
         self.attributions = {}
+
+        if isinstance(x_batch, torch.Tensor):
+            x_batch = x_batch.detach().cpu().numpy()
+        if isinstance(y_batch, torch.Tensor):
+            y_batch = y_batch.detach().cpu().numpy()
+
         for explainer_name, (
             explain_func,
             explain_func_kwargs,
@@ -201,12 +207,12 @@ class QuantusEvaluator:
         explain_func, explain_func_kwargs = self.explainers[explainer_name]
         a_batch = self.attributions[explainer_name]
 
-        if type(x_batch) is torch.Tensor:
-            x_batch = x_batch.cpu().numpy()
-        if type(y_batch) is torch.Tensor:
-            y_batch = y_batch.cpu().numpy()
-        if type(a_batch) is torch.Tensor:
-            a_batch = a_batch.cpu().numpy()
+        if isinstance(x_batch, torch.Tensor):
+            x_batch = x_batch.detach().cpu().numpy()
+        if isinstance(y_batch, torch.Tensor):
+            y_batch = y_batch.detach().cpu().numpy()
+        if isinstance(a_batch, torch.Tensor):
+            a_batch = a_batch.detach().cpu().numpy()
 
         print(f"Evaluating metric {metric_name} with explainer {explainer_name}")
 

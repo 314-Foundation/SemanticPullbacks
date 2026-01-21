@@ -24,11 +24,14 @@ IMAGENETTE_TO_IMAGENET = [
 CLASS_NAMES = {
     0: ("tench", "Tinca tinca"),
     217: ("spaniel", "English springer", "English springer spaniel"),
-    482: ("cassette player",),
+    482: (
+        "cas. player",
+        "cassette player",
+    ),
     491: ("chain saw", "chainsaw"),
     497: ("church", "church building"),
-    566: ("horn", "French horn", "horn"),
-    569: ("garbage truck", "dustcart"),
+    566: ("horn", "French horn"),
+    569: ("dustcart", "garbage truck"),
     571: ("gas pump", "gasoline pump", "petrol pump", "island dispenser"),
     574: ("golf ball",),
     701: ("parachute", "chute"),
@@ -138,8 +141,8 @@ def get_imagenet():
     )
 
 
-def get_examples(loader, all_classes=False):
-    class_indices = list(range(10)) if all_classes else [0, 2, 4, 6, 8]
+def get_examples(loader, classes=None):
+    class_indices = [0, 2, 4, 6, 8] if classes is None else classes
     target_classes = [imagenette_label_to_imagenet(l) for l in class_indices]
     # target_classes = class_indices
 
