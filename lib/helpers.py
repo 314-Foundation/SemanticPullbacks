@@ -239,8 +239,9 @@ def make_2x2_batch_from_classes(x_batch, y_batch, class_list=None):
     return x_out, y_out
 
 
-def batched_seismic_rgb(
+def batched_cmap_rgb(
     x: torch.Tensor,
+    cmap_name: str = "seismic",
     vmin: float | None = None,
     vmax: float | None = None,
 ):
@@ -256,12 +257,10 @@ def batched_seismic_rgb(
     if vmax is None:
         vmax = x.max()
 
-    # normalizacja jak w imshow
     x_norm = (x - vmin) / (vmax - vmin + 1e-8)
     x_norm = x_norm.clamp(0.0, 1.0)
 
-    # colormap → LUT
-    cmap = plt.get_cmap("seismic")
+    cmap = plt.get_cmap(cmap_name)
     lut = torch.from_numpy(cmap(torch.linspace(0, 1, 256).numpy())[:, :3])
     lut = lut.to(x.device).float()  # (256, 3)
 
@@ -282,3 +281,25 @@ def show_images(images, adv_images, k=5):
     show_diff = torch.cat([uimages, udiff], dim=1).flatten(0, 1)
 
     return show_adv, show_diff
+
+
+def interleave_batches(batch1, batch2, batch3=None, k=10):
+    batch1_list = torch.split(batch1, k)
+    batch2_list = torch.split(batch2, k)
+    result = []
+    if batch3 is None:
+        for a, b in zip(batch1_list, batch2_list):
+            result.extend([a, b])
+        return torch.cat(result, dim=0)
+
+    batch3_list = torch.split(batch3, k)
+    for a, b, c in zip(batch1_list, batch2_list, batch3_list):
+        result.extend([a, b, c])
+    return torch.cat(result, dim=0)
+
+
+def as_cmap_rgb(x, cmap_name="seismic", mode="mean"):
+    x = squeeze_channels(x, mode=mode)
+    x = normalise_by_negative_batch(x)
+    x = batched_cmap_rgb(x.cpu(), cmap_name=cmap_name)
+    return x

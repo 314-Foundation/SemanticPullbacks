@@ -33,7 +33,12 @@ def default_explainers(filter_explainers=None):
         "DoublePullbackBis": (
             quantus_double_pullback_ascent_diff_explain_func,
             {
-                "pga_kwargs_1": {**pga_kwargs_grad, "alpha": 2},
+                "pga_kwargs_1": {
+                    **pga_kwargs_grad,
+                    "alpha": 2,
+                    "steps": 1,
+                    "normalize_step": False,
+                },
                 "pga_kwargs_2": pga_kwargs_grad,
             },
         ),
