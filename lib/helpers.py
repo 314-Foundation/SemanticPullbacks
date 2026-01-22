@@ -11,6 +11,7 @@ def plot_example_grid(
     X,
     nrow=4,
     column_titles=None,
+    row_titles=None,
     cmap=None,
     scale_each: bool = True,
     normalize=True,
@@ -22,7 +23,7 @@ def plot_example_grid(
     dpi=80,
     heatmap=False,
     heatmap_mode="mean",
-    row_titles=None,
+    heatmap_normalise=True,
     fontsize=36,
 ):
     """
@@ -32,7 +33,8 @@ def plot_example_grid(
     """
     if heatmap:
         X = squeeze_channels(X, mode=heatmap_mode)
-        X = normalise_by_negative_batch(X)
+        if heatmap_normalise:
+            X = normalise_by_negative_batch(X)
         if cmap is None:
             cmap = "seismic"
 
@@ -283,23 +285,22 @@ def show_images(images, adv_images, k=5):
     return show_adv, show_diff
 
 
-def interleave_batches(batch1, batch2, batch3=None, k=10):
-    batch1_list = torch.split(batch1, k)
-    batch2_list = torch.split(batch2, k)
+def interleave_batches(batches, k=10):
+    """
+    Interleave a list of batches in chunks of size k.
+    Example: interleave_batches([batch1, batch2, batch3], k=10)
+    Returns a tensor with chunks from each batch interleaved.
+    """
+    split_batches = [torch.split(b, k) for b in batches]
     result = []
-    if batch3 is None:
-        for a, b in zip(batch1_list, batch2_list):
-            result.extend([a, b])
-        return torch.cat(result, dim=0)
-
-    batch3_list = torch.split(batch3, k)
-    for a, b, c in zip(batch1_list, batch2_list, batch3_list):
-        result.extend([a, b, c])
+    for chunks in zip(*split_batches):
+        result.extend(chunks)
     return torch.cat(result, dim=0)
 
 
-def as_cmap_rgb(x, cmap_name="seismic", mode="mean"):
+def as_cmap_rgb(x, cmap_name="seismic", mode="mean", normalise=True):
     x = squeeze_channels(x, mode=mode)
-    x = normalise_by_negative_batch(x)
+    if normalise:
+        x = normalise_by_negative_batch(x)
     x = batched_cmap_rgb(x.cpu(), cmap_name=cmap_name)
     return x

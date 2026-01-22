@@ -19,10 +19,10 @@ def default_explainers(filter_explainers=None):
     )
     explainers = {
         "SoftPullback": (quantus_pullback_ascent_diff_explain_func, pga_kwargs_grad),
-        "SoftPullbackMulti": (
-            quantus_pullback_ascent_diff_explain_func,
-            {**pga_kwargs_grad, "steps": 5},
-        ),
+        # "SoftPullbackMulti": (
+        #     quantus_pullback_ascent_diff_explain_func,
+        #     {**pga_kwargs_grad, "steps": 5},
+        # ),
         "DoublePullback": (
             quantus_double_pullback_ascent_diff_explain_func,
             {
