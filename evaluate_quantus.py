@@ -36,8 +36,6 @@ def main(args):
         # gc_layer = model[1].stages[-1].blocks[-1].norm2  # rises error
         gc_layer = None
 
-    # gc_layer = None
-
     soften_module_inplace_(
         model,
         temperatures=temperatures,

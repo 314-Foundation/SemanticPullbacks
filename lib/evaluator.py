@@ -63,10 +63,10 @@ def default_explainers(filter_explainers=None, gc_layer=None):
         # "Lime": (quantus.explain, {"method": "Lime"}),  # way slower than others
         # "Occlusion": (quantus.explain, {"method": "Occlusion"}),  # very, very slow
         # "KernelShap": (quantus.explain, {"method": "KernelShap"}),  # slow and bad
-        # "LRP": (quantus.explain, {"method": "LRP"}),  # requires additional rules
+        # "LRP": (quantus.explain, {"method": "LRP"}),  # requires additional custom rules for many layers (even for nn.LayerNorm)
         # "DeepLiftShap": (quantus.explain, {"method": "DeepLiftShap"}),  # slow, similar to DeepLift
         # "FeatureAblation": (quantus.explain, {"method": "FeatureAblation"}),  # very slow
-        # "FeaturePermutation": (quantus.explain, {"method": "FeaturePermutation"}),
+        # "FeaturePermutation": (quantus.explain, {"method": "FeaturePermutation"}),  # very slow
     }
     if gc_layer is not None:
         explainers.update(
@@ -78,6 +78,16 @@ def default_explainers(filter_explainers=None, gc_layer=None):
                         "gc_layer": gc_layer,
                     },
                 ),
+                # "InternalInfluence": (  # CUDA runs out of memory even for small batches
+                #     quantus.explain,
+                #     {"method": "InternalInfluence", "gc_layer": gc_layer},
+                # ),
+                # {
+                #     "LayerGradCam": (  # This is just for a single layer
+                #         quantus.explain,
+                #         {"method": "LayerGradCam", "gc_layer": gc_layer},
+                #     ),
+                # },
             }
         )
 
@@ -91,6 +101,13 @@ def default_explainers(filter_explainers=None, gc_layer=None):
 
 def default_metrics(filter_metrics=None):
     metrics = {
+        "infidelity": quantus.Infidelity(
+            perturb_baseline="uniform",
+            # perturb_func=quantus.perturb_func.baseline_replacement_by_indices,
+            n_perturb_samples=5,
+            perturb_patch_sizes=[56],
+            display_progressbar=True,
+        ),
         "faithfulness_correlation": quantus.FaithfulnessCorrelation(
             nr_runs=100,
             subset_size=12544,
@@ -121,13 +138,6 @@ def default_metrics(filter_metrics=None):
         #     perturb_baseline="black",
         #     # perturb_func=quantus.perturb_func.baseline_replacement_by_indices,
         # ),
-        "infidelity": quantus.Infidelity(
-            perturb_baseline="uniform",
-            # perturb_func=quantus.perturb_func.baseline_replacement_by_indices,
-            n_perturb_samples=5,
-            perturb_patch_sizes=[56],
-            display_progressbar=True,
-        ),
         # TODO: play around with these metrics later, understand them better
         # "region_perturbation": quantus.RegionPerturbation(
         #     patch_size=14,
