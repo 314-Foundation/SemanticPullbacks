@@ -28,6 +28,16 @@ def main(args):
         get_default_kwargs()
     )
 
+    if args.model_name.startswith("resnet"):
+        gc_layer = model[1].layer4[-1].conv3
+    elif args.model_name.startswith("vgg"):
+        gc_layer = model[1].avgpool
+    elif args.model_name.startswith("pvt"):
+        # gc_layer = model[1].stages[-1].blocks[-1].norm2  # rises error
+        gc_layer = None
+
+    # gc_layer = None
+
     soften_module_inplace_(
         model,
         temperatures=temperatures,
@@ -43,7 +53,7 @@ def main(args):
     # explainers_filter = ["SoftPullback", "Gradient"]
     # metrics_filter = ["monotonicity_correlation", "faithfulness_correlation"]
 
-    explainers = default_explainers(explainers_filter)
+    explainers = default_explainers(explainers_filter, gc_layer=gc_layer)
     metrics = default_metrics(metrics_filter)
 
     evaluator = QuantusEvaluator(
