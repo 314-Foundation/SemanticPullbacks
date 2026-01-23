@@ -92,7 +92,7 @@ def plot_example_grid(
         for i, row_title in enumerate(row_titles):
             y_center = i * img_h + img_h / 2
             plt.text(
-                x=-10,  # slightly outside the image
+                x=-8,  # slightly outside the image
                 y=y_center,
                 s=row_title,
                 fontdict={"fontsize": 20},
@@ -108,7 +108,7 @@ def plot_example_grid(
     plt.tight_layout()
 
     if save_path is not None:
-        plt.savefig(save_path, bbox_inches="tight", pad_inches=0)
+        plt.savefig(save_path, bbox_inches="tight", pad_inches=0.02)
     else:
         plt.show()
 

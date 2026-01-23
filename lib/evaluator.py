@@ -13,7 +13,7 @@ from lib.attributions import (
 from lib.defaults import get_default_kwargs
 
 
-def default_explainers(filter_explainers=None):
+def default_explainers(filter_explainers=None, gc_layer=None):
     temperatures, pga_kwargs_counterfactual, pga_kwargs_grad, pga_kwargs_adv = (
         get_default_kwargs()
     )
@@ -52,14 +52,34 @@ def default_explainers(filter_explainers=None):
         ),
         "Gradient": (quantus.explain, {"method": "Gradient"}),
         "GradientShap": (quantus.explain, {"method": "GradientShap"}),
-        "IntegratedGradients": (quantus.explain, {"method": "IntegratedGradients"}),
+        "IntegratedGradients": (
+            quantus.explain,
+            {"method": "IntegratedGradients"},
+        ),
         "Saliency": (quantus.explain, {"method": "Saliency"}),
         "DeepLift": (quantus.explain, {"method": "DeepLift"}),
         "InputXGradient": (quantus.explain, {"method": "InputXGradient"}),
         "Deconvolution": (quantus.explain, {"method": "Deconvolution"}),
-        # "GuidedGradCam": (quantus.explain, {"method": "GuidedGradCam"}),  # requires additional param
         # "Lime": (quantus.explain, {"method": "Lime"}),  # way slower than others
+        # "Occlusion": (quantus.explain, {"method": "Occlusion"}),  # very, very slow
+        # "KernelShap": (quantus.explain, {"method": "KernelShap"}),  # slow and bad
+        # "LRP": (quantus.explain, {"method": "LRP"}),  # requires additional rules
+        # "DeepLiftShap": (quantus.explain, {"method": "DeepLiftShap"}),  # slow, similar to DeepLift
+        # "FeatureAblation": (quantus.explain, {"method": "FeatureAblation"}),  # very slow
+        # "FeaturePermutation": (quantus.explain, {"method": "FeaturePermutation"}),
     }
+    if gc_layer is not None:
+        explainers.update(
+            {
+                "GuidedGradCam": (
+                    quantus.explain,
+                    {
+                        "method": "GuidedGradCam",
+                        "gc_layer": gc_layer,
+                    },
+                ),
+            }
+        )
 
     if filter_explainers is not None:
         explainers = {
@@ -95,12 +115,12 @@ def default_metrics(filter_metrics=None):
             # abs=False,
             # normalise=False,
         ),
-        "pixel_flipping": quantus.PixelFlipping(
-            features_in_step=12544 // 4,
-            # features_in_step=224,
-            perturb_baseline="black",
-            # perturb_func=quantus.perturb_func.baseline_replacement_by_indices,
-        ),
+        # "pixel_flipping": quantus.PixelFlipping(
+        #     features_in_step=12544 // 4,
+        #     # features_in_step=224,
+        #     perturb_baseline="black",
+        #     # perturb_func=quantus.perturb_func.baseline_replacement_by_indices,
+        # ),
         "infidelity": quantus.Infidelity(
             perturb_baseline="uniform",
             # perturb_func=quantus.perturb_func.baseline_replacement_by_indices,
@@ -136,17 +156,17 @@ def default_metrics(filter_metrics=None):
         #     threshold=0.6,
         #     return_aggregate=False,
         # ),
-        "avg_sensitivity": quantus.AvgSensitivity(
-            nr_samples=10,
-            # lower_bound=0.2,
-            lower_bound=0.02,
-            # abs=True,
-            # normalise=True,
-            norm_numerator=quantus.norm_func.fro_norm,
-            norm_denominator=quantus.norm_func.fro_norm,
-            # perturb_func=quantus.perturb_func.uniform_noise,
-            similarity_func=quantus.similarity_func.difference,
-        ),
+        # "avg_sensitivity": quantus.AvgSensitivity(
+        #     nr_samples=10,
+        #     # lower_bound=0.2,
+        #     lower_bound=0.02,
+        #     # abs=True,
+        #     # normalise=True,
+        #     norm_numerator=quantus.norm_func.fro_norm,
+        #     norm_denominator=quantus.norm_func.fro_norm,
+        #     # perturb_func=quantus.perturb_func.uniform_noise,
+        #     similarity_func=quantus.similarity_func.difference,
+        # ),
         "max_sensitivity": quantus.MaxSensitivity(
             nr_samples=10,
             lower_bound=0.02,
@@ -206,6 +226,8 @@ class QuantusEvaluator:
             explain_func_kwargs,
         ) in self.explainers.items():
             self.empty_cache()
+
+            print(f"Precomputing attributions for explainer {explainer_name}")
 
             self.attributions[explainer_name] = explain_func(
                 self.model, x_batch, y_batch, device=self.device, **explain_func_kwargs
@@ -314,6 +336,8 @@ class QuantusEvaluator:
             def trim(x):
                 s = f"{x:.3f}"
                 return s.rstrip("0").rstrip(".") if "." in s else s
+
+            arr = np.ma.masked_invalid(arr)
 
             mean = trim(arr.mean())
             std = trim(arr.std())
