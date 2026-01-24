@@ -337,20 +337,27 @@ class QuantusEvaluator:
 
     @staticmethod
     def summarize_results(df: pd.DataFrame) -> pd.DataFrame:
-
         def format_mean_std(cell):
             arr = np.array(cell)
             if len(arr) == 0:
                 return ""
 
-            def trim(x):
-                s = f"{x:.3f}"
-                return s.rstrip("0").rstrip(".") if "." in s else s
-
             arr = np.ma.masked_invalid(arr)
+            mean = arr.mean()
+            std = arr.std()
 
-            mean = trim(arr.mean())
-            std = trim(arr.std())
-            return f"{mean}\u00b1{std}"
+            def format_val(x):
+                if np.isnan(x):
+                    return ""
+                # Format in scientific notation if very large or very small
+                if abs(x) >= 1e4 or (abs(x) > 0 and abs(x) < 1e-3):
+                    return f"{x:.2e}"
+                else:
+                    s = f"{x:.3f}"
+                    return s.rstrip("0").rstrip(".") if "." in s else s
+
+            mean_str = format_val(mean)
+            std_str = format_val(std)
+            return f"{mean_str}\u00b1{std_str}"
 
         return df.map(format_mean_std)
