@@ -157,12 +157,12 @@ class SurrogateMaxPool2d(SoftMaxPool2d):
 class SurrogateLayerNorm(SurrogateModule, nn.LayerNorm):
     def forward(self, x: Tensor) -> Tensor:
         # Normalize over the last D dimensions, where
-        # D = len(normalized_shape), exactly like nn.LayerNorm. :contentReference[oaicite:0]{index=0}
+        # D = len(normalized_shape), exactly like nn.LayerNorm.
         D = len(self.normalized_shape)
         dims = tuple(range(x.dim() - D, x.dim()))
 
         mean = x.mean(dim=dims, keepdim=True)
-        # IMPORTANT: use biased variance (unbiased=False), same as LayerNorm. :contentReference[oaicite:1]{index=1}
+        # IMPORTANT: use biased variance (unbiased=False), same as LayerNorm.
         var = x.var(dim=dims, keepdim=True, unbiased=False)
 
         if not self.standard_backward:

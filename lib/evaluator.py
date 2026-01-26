@@ -124,7 +124,7 @@ def default_metrics(filter_metrics=None):
             # similarity_func=quantus.similarity_func.correlation_spearman,
         ),
         "faithfulness_estimate": quantus.FaithfulnessEstimate(
-            # perturb_func=qua ntus.perturb_func.baseline_replacement_by_indices,
+            # perturb_func=quantus.perturb_func.baseline_replacement_by_indices,
             # similarity_func=quantus.similarity_func.correlation_pearson,
             features_in_step=12544 // 4,
             # features_in_step=224,
@@ -132,51 +132,6 @@ def default_metrics(filter_metrics=None):
             # abs=False,
             # normalise=False,
         ),
-        # "pixel_flipping": quantus.PixelFlipping(
-        #     features_in_step=12544 // 4,
-        #     # features_in_step=224,
-        #     perturb_baseline="black",
-        #     # perturb_func=quantus.perturb_func.baseline_replacement_by_indices,
-        # ),
-        # TODO: play around with these metrics later, understand them better
-        # "region_perturbation": quantus.RegionPerturbation(
-        #     patch_size=14,
-        #     regions_evaluation=50,
-        #     perturb_baseline="black",
-        #     normalise=True,
-        # ),
-        # "selectivity": quantus.Selectivity(
-        #     patch_size=56,
-        #     perturb_baseline="black",
-        # ),
-        # "sensitivity_n": quantus.SensitivityN(
-        #     # features_in_step=224,
-        #     features_in_step=12544 // 4,
-        #     n_max_percentage=0.8,
-        #     # similarity_func=quantus.similarity_func.correlation_pearson,
-        #     # perturb_func=quantus.perturb_func.baseline_replacement_by_indices,
-        #     perturb_baseline="black",
-        #     return_aggregate=False,
-        #     # abs=True,
-        # ),
-        # TODO: fix these metrics as they cause errors
-        # "IROF": quantus.IROF(),
-        # "road": quantus.ROAD(),
-        # "sufficiency": quantus.Sufficiency(
-        #     threshold=0.6,
-        #     return_aggregate=False,
-        # ),
-        # "avg_sensitivity": quantus.AvgSensitivity(
-        #     nr_samples=10,
-        #     # lower_bound=0.2,
-        #     lower_bound=0.02,
-        #     # abs=True,
-        #     # normalise=True,
-        #     norm_numerator=quantus.norm_func.fro_norm,
-        #     norm_denominator=quantus.norm_func.fro_norm,
-        #     # perturb_func=quantus.perturb_func.uniform_noise,
-        #     similarity_func=quantus.similarity_func.difference,
-        # ),
         "max_sensitivity": quantus.MaxSensitivity(
             nr_samples=10,
             lower_bound=0.02,
@@ -205,15 +160,6 @@ def default_metrics(filter_metrics=None):
         metrics = {name: metrics[name] for name in filter_metrics if name in metrics}
 
     return metrics
-    # "faithfulness_correlation"  # Medium, Unstable
-    # "monotonicity_correlation"  # Very Good
-    # "faithfulness_estimate"  # Good, Slow
-    # "pixel_flipping"  # Good
-    # "infidelity"
-    # "avg_sensitivity"  # Very Good
-    # "max_sensitivity"  # Very Good
-    # "sparseness"  # Good
-    # "random_logit"  # Similar to other explainers
 
 
 class QuantusEvaluator:

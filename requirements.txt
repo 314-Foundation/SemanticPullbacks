@@ -2,9 +2,9 @@
 # torchvision
 ipykernel
 torchattacks
-spaces
-gradio
-gradio_imageslider
+# spaces
+# gradio
+# gradio_imageslider
 matplotlib
 timm
 captum

@@ -8,7 +8,6 @@ from torchvision.datasets import ImageFolder, Imagenette
 MEAN = [0.485, 0.456, 0.406]
 STD = [0.229, 0.224, 0.225]
 
-# https://gist.github.com/yrevar/942d3a0ac09ec9e5eb3a "text: imagenet 1000 class idx to human readable labels (Fox, E ..."
 IMAGENETTE_TO_IMAGENET = [
     0,  # tench
     217,  # English springer

@@ -6,7 +6,6 @@ from torchattacks.attack import Attack
 class PGA(Attack):
     r"""
     Projected Gradient Ascent.
-    [https://arxiv.org/abs/1706.06083]
     """
 
     def __init__(
@@ -85,7 +84,7 @@ class PGA(Attack):
                 cost = -self.compute_loss(outputs, labels)
 
             # Update adversarial images
-            # Note that this can be non-deterministic on CUDA (if the deterministic flag is not set globally)
+            # NOTE: this can be non-deterministic on CUDA (if the deterministic flag is not set globally)
             grad = torch.autograd.grad(
                 cost, adv_images, retain_graph=False, create_graph=False
             )[0]
