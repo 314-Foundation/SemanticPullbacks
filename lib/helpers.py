@@ -95,7 +95,7 @@ def plot_example_grid(
                 x=-8,  # slightly outside the image
                 y=y_center,
                 s=row_title,
-                fontdict={"fontsize": 20},
+                fontdict={"fontsize": fontsize},
                 ha="right",
                 va="center",
                 rotation=90,
