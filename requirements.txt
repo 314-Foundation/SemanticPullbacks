@@ -2,12 +2,8 @@
 # torchvision
 ipykernel
 torchattacks
-# spaces
-# gradio
-# gradio_imageslider
 matplotlib
 timm
 captum
 seaborn
-# scikit-image>=0.26.0rc1
 quantus
