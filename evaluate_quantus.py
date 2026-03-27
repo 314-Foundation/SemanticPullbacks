@@ -50,6 +50,7 @@ def main(args):
         metrics_filter = ["monotonicity_correlation", "faithfulness_correlation"]
     # explainers_filter = ["SoftPullback", "Gradient"]
     # metrics_filter = ["monotonicity_correlation", "faithfulness_correlation"]
+    # metrics_filter = ["infidelity"]
 
     explainers = default_explainers(explainers_filter, gc_layer=gc_layer)
     metrics = default_metrics(metrics_filter)

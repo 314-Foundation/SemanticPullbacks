@@ -53,9 +53,55 @@ def default_explainers(filter_explainers=None, gc_layer=None):
             {
                 **pga_kwargs_counterfactual,
                 "steps": 10,
-                # "clip_margin": None,
             },
         ),
+        "PullbackAscentNoClip": (
+            quantus_pullback_ascent_diff_explain_func,
+            {
+                **pga_kwargs_counterfactual,
+                "clip_margin": None,
+            },
+        ),
+        "PullbackAscentBisNoClip": (
+            quantus_pullback_ascent_diff_explain_func,
+            {
+                **pga_kwargs_counterfactual,
+                "steps": 10,
+                "clip_margin": None,
+            },
+        ),
+        # "PullbackAscentSmallAlpha": (
+        #     quantus_pullback_ascent_diff_explain_func,
+        #     {
+        #         **pga_kwargs_counterfactual,
+        #         "alpha": 5,
+        #     },
+        # ),
+        # "PullbackAscentNoAlpha": (
+        #     quantus_pullback_ascent_diff_explain_func,
+        #     {
+        #         **pga_kwargs_counterfactual,
+        #         "alpha": None,
+        #         "normalize_step": False,
+        #     },
+        # ),
+        # "PullbackAscentSmallAlphaNoClip": (
+        #     quantus_pullback_ascent_diff_explain_func,
+        #     {
+        #         **pga_kwargs_counterfactual,
+        #         "alpha": 5,
+        #         "clip_margin": None,
+        #     },
+        # ),
+        # "PullbackAscentNoAlphaNoClip": (
+        #     quantus_pullback_ascent_diff_explain_func,
+        #     {
+        #         **pga_kwargs_counterfactual,
+        #         "alpha": None,
+        #         "normalize_step": False,
+        #         "clip_margin": None,
+        #     },
+        # ),
         "Gradient": (quantus.explain, {"method": "Gradient"}),
         "GradientShap": (quantus.explain, {"method": "GradientShap"}),
         "IntegratedGradients": (
