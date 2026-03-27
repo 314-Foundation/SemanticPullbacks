@@ -11,6 +11,8 @@ from lib.attributions import (
     quantus_pullback_ascent_diff_explain_func,
 )
 from lib.defaults import get_default_kwargs
+from lib.helpers import l2_normalize_batch_numpy
+from lib.metrics import InfidelityOptimalScaling
 
 
 def default_explainers(filter_explainers=None, gc_layer=None):
@@ -48,7 +50,11 @@ def default_explainers(filter_explainers=None, gc_layer=None):
         ),
         "PullbackAscentBis": (
             quantus_pullback_ascent_diff_explain_func,
-            {**pga_kwargs_counterfactual, "steps": 10},
+            {
+                **pga_kwargs_counterfactual,
+                "steps": 10,
+                # "clip_margin": None,
+            },
         ),
         "Gradient": (quantus.explain, {"method": "Gradient"}),
         "GradientShap": (quantus.explain, {"method": "GradientShap"}),
@@ -101,25 +107,35 @@ def default_explainers(filter_explainers=None, gc_layer=None):
 
 def default_metrics(filter_metrics=None):
     metrics = {
-        "infidelity": quantus.Infidelity(
+        # "infidelity": quantus.Infidelity(
+        "infidelity": InfidelityOptimalScaling(
             perturb_baseline="uniform",
             # perturb_func=quantus.perturb_func.baseline_replacement_by_indices,
+            perturb_func_kwargs={"uniform_low": -1.0, "uniform_high": 1.0},
             n_perturb_samples=5,
+            # n_perturb_samples=10,
             perturb_patch_sizes=[56],
             display_progressbar=True,
+            # loss_func=mse_optimal_scaling,
+            # normalise=True,
+            # normalise_func=l2_normalize_batch_numpy,
+            # normalise_func=normalise_by_average_second_moment_estimate,
         ),
         "faithfulness_correlation": quantus.FaithfulnessCorrelation(
             nr_runs=100,
             subset_size=12544,
             return_aggregate=False,
             # perturb_baseline="uniform",
+            # normalise=True,
+            # normalise_func=l2_normalize_batch_numpy,
         ),
         "monotonicity_correlation": quantus.MonotonicityCorrelation(
             nr_samples=10,
             features_in_step=12544,  # 224*224 / 4
             # perturb_baseline="uniform",
             # abs=False,
-            # normalise=False,
+            # normalise=True,
+            # normalise_func=l2_normalize_batch_numpy,
             # perturb_func=quantus.perturb_func.baseline_replacement_by_indices,
             # similarity_func=quantus.similarity_func.correlation_spearman,
         ),
@@ -180,6 +196,8 @@ def default_metrics(filter_metrics=None):
         "max_sensitivity": quantus.MaxSensitivity(
             nr_samples=10,
             lower_bound=0.02,
+            # normalise=True,
+            # normalise_func=l2_normalize_batch_numpy,
             # norm_numerator=quantus.norm_func.fro_norm,
             # norm_denominator=quantus.norm_func.fro_norm,
             # perturb_func=quantus.perturb_func.uniform_noise,
@@ -336,13 +354,20 @@ class QuantusEvaluator:
         return pd.read_pickle(f"{filename}.pkl")
 
     @staticmethod
-    def summarize_results(df: pd.DataFrame) -> pd.DataFrame:
+    def summarize_results(df: pd.DataFrame, quantile=0.0) -> pd.DataFrame:
         def format_mean_std(cell):
             arr = np.array(cell)
             if len(arr) == 0:
                 return ""
 
             arr = np.ma.masked_invalid(arr)
+
+            if quantile > 0:
+                lower = np.quantile(arr, quantile)
+                upper = np.quantile(arr, 1 - quantile)
+
+                arr = np.clip(arr, lower, upper)
+
             mean = arr.mean()
             std = arr.std()
 

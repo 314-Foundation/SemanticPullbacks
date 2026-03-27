@@ -179,6 +179,23 @@ def normalise_by_negative_batch(a: torch.Tensor) -> torch.Tensor:
     return out
 
 
+def l2_normalize_batch_numpy(images, eps=1e-12):
+    """
+    images: numpy array (B, H, W, C)
+    """
+
+    B = images.shape[0]
+    flat = images.reshape(B, -1)
+
+    norms = np.linalg.norm(flat, ord=2, axis=1, keepdims=True)
+    norms = np.maximum(norms, eps)
+
+    flat_normalized = flat / norms
+    images_normalized = flat_normalized.reshape(images.shape)
+
+    return images_normalized
+
+
 def plot_function(
     f,
     x_range=(-5, 5),
