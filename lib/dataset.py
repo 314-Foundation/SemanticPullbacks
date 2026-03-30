@@ -1,4 +1,5 @@
 import torch
+from captum.attr._utils.lrp_rules import EpsilonRule
 from torch import nn
 from torch.utils.data import DataLoader
 from torchvision import transforms
@@ -82,6 +83,7 @@ class FromMyNormalizeToImageNet(nn.Module):
         # self.imagenet_norm = ImageNetNormalize()
         self.mean = MEAN
         self.std = STD
+        self.rule = EpsilonRule()
 
     def forward(self, x):
         x = (x + 1) / 2  # Map from [-1,1] to [0,1]
@@ -107,6 +109,7 @@ class ConditionalTransform(nn.Module):
         self.crop_224 = T.CenterCrop(224)
         self.to_tensor = T.ToTensor()
         self.normalize = my_normalize()
+        # self.normalize = ImageNetNormalize()
 
     def __call__(self, img):
         # img: PIL.Image
@@ -172,3 +175,4 @@ def wrap_imagenet_model(model):
     # return nn.Sequential(ImageNetNormalize(), model, ImagenetToImagenetteHead())
     # return nn.Sequential(FromMyNormalizeToImageNet(), model, ImagenetToImagenetteHead())
     return nn.Sequential(FromMyNormalizeToImageNet(), model)
+    # return model

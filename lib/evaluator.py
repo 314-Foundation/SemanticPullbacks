@@ -1,4 +1,5 @@
 import gc
+import time
 from typing import Dict
 
 import numpy as np
@@ -32,29 +33,29 @@ def default_explainers(filter_explainers=None, gc_layer=None):
                 "pga_kwargs_2": pga_kwargs_grad,
             },
         ),
-        "DoublePullbackBis": (
-            quantus_double_pullback_ascent_diff_explain_func,
-            {
-                "pga_kwargs_1": {
-                    **pga_kwargs_grad,
-                    "alpha": 2,
-                    "steps": 1,
-                    "normalize_step": False,
-                },
-                "pga_kwargs_2": pga_kwargs_grad,
-            },
-        ),
+        # "DoublePullbackBis": (
+        #     quantus_double_pullback_ascent_diff_explain_func,
+        #     {
+        #         "pga_kwargs_1": {
+        #             **pga_kwargs_grad,
+        #             "alpha": 2,
+        #             "steps": 1,
+        #             "normalize_step": False,
+        #         },
+        #         "pga_kwargs_2": pga_kwargs_grad,
+        #     },
+        # ),
         "PullbackAscent": (
             quantus_pullback_ascent_diff_explain_func,
             pga_kwargs_counterfactual,
         ),
-        "PullbackAscentBis": (
-            quantus_pullback_ascent_diff_explain_func,
-            {
-                **pga_kwargs_counterfactual,
-                "steps": 10,
-            },
-        ),
+        # "PullbackAscentBis": (
+        #     quantus_pullback_ascent_diff_explain_func,
+        #     {
+        #         **pga_kwargs_counterfactual,
+        #         "steps": 10,
+        #     },
+        # ),
         "PullbackAscentNoClip": (
             quantus_pullback_ascent_diff_explain_func,
             {
@@ -62,14 +63,14 @@ def default_explainers(filter_explainers=None, gc_layer=None):
                 "clip_margin": None,
             },
         ),
-        "PullbackAscentBisNoClip": (
-            quantus_pullback_ascent_diff_explain_func,
-            {
-                **pga_kwargs_counterfactual,
-                "steps": 10,
-                "clip_margin": None,
-            },
-        ),
+        # "PullbackAscentBisNoClip": (
+        #     quantus_pullback_ascent_diff_explain_func,
+        #     {
+        #         **pga_kwargs_counterfactual,
+        #         "steps": 10,
+        #         "clip_margin": None,
+        #     },
+        # ),
         # "PullbackAscentSmallAlpha": (
         #     quantus_pullback_ascent_diff_explain_func,
         #     {
@@ -113,12 +114,24 @@ def default_explainers(filter_explainers=None, gc_layer=None):
         "InputXGradient": (quantus.explain, {"method": "InputXGradient"}),
         "Deconvolution": (quantus.explain, {"method": "Deconvolution"}),
         # "Lime": (quantus.explain, {"method": "Lime"}),  # way slower than others
-        # "Occlusion": (quantus.explain, {"method": "Occlusion"}),  # very, very slow
+        # # "Occlusion": (quantus.explain, {"method": "Occlusion"}),  # very, very slow
         # "KernelShap": (quantus.explain, {"method": "KernelShap"}),  # slow and bad
-        # "LRP": (quantus.explain, {"method": "LRP"}),  # requires additional custom rules for many layers (even for nn.LayerNorm)
-        # "DeepLiftShap": (quantus.explain, {"method": "DeepLiftShap"}),  # slow, similar to DeepLift
-        # "FeatureAblation": (quantus.explain, {"method": "FeatureAblation"}),  # very slow
-        # "FeaturePermutation": (quantus.explain, {"method": "FeaturePermutation"}),  # very slow
+        # # "LRP": (
+        # #     quantus.explain,
+        # #     {"method": "LRP"},
+        # # ),  # requires additional custom rules for many layers (even for nn.LayerNorm)
+        # "DeepLiftShap": (
+        #     quantus.explain,
+        #     {"method": "DeepLiftShap"},
+        # ),  # slow, similar to DeepLift
+        # "FeatureAblation": (
+        #     quantus.explain,
+        #     {"method": "FeatureAblation"},
+        # ),  # very slow
+        # "FeaturePermutation": (
+        #     quantus.explain,
+        #     {"method": "FeaturePermutation"},
+        # ),  # very slow
     }
     if gc_layer is not None:
         explainers.update(
@@ -249,11 +262,11 @@ def default_metrics(filter_metrics=None):
             # perturb_func=quantus.perturb_func.uniform_noise,
             # similarity_func=quantus.similarity_func.difference,
         ),
-        "sparseness": quantus.Sparseness(
-            # abs=False,
-            # normalise=False,
-            # normalise=True,
-        ),
+        # "sparseness": quantus.Sparseness(
+        #     # abs=False,
+        #     # normalise=False,
+        #     # normalise=True,
+        # ),
         "random_logit": quantus.RandomLogit(
             num_classes=1000,
             # abs=True,
@@ -302,10 +315,13 @@ class QuantusEvaluator:
             self.empty_cache()
 
             print(f"Precomputing attributions for explainer {explainer_name}")
-
+            start_time = time.time()
             self.attributions[explainer_name] = explain_func(
                 self.model, x_batch, y_batch, device=self.device, **explain_func_kwargs
             )
+            end_time = time.time()
+            elapsed = end_time - start_time
+            print(f"Explainer {explainer_name} took {elapsed:.3f} seconds.")
 
     def evaluate_metric(self, metric_name, explainer_name, x_batch, y_batch) -> list:
         metric = self.metrics[metric_name]
