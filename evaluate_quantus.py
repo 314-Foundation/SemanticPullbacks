@@ -23,6 +23,7 @@ def main(args):
         model_name=args.model_name,
         model_source=args.model_source,
         seed=args.seed,
+        dataset=args.dataset if hasattr(args, "dataset") else "imagenette",
     )
     temperatures, pga_kwargs_counterfactual, pga_kwargs_grad, pga_kwargs_adv = (
         get_default_kwargs()
@@ -94,5 +95,11 @@ if __name__ == "__main__":
         help="If set, runs in test mode with fewer explainers and metrics for quick testing.",
     )
     parser.add_argument("--seed", type=int, required=False, default=314)
+    parser.add_argument(
+        "--dataset",
+        required=False,
+        default="imagenette",
+        choices=["imagenette", "imagenet"],
+    )
     args = parser.parse_args()
     main(args)
