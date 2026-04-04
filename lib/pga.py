@@ -24,6 +24,7 @@ class PGA(Attack):
         clip_max=1.0,
         clip_margin=0.0,  # set to None to disable clipping to the [-1, 1] range
         eps_for_division=1e-20,
+        clip_every_n_steps=1,
     ):
         super().__init__("PGA", model)
         self.eps = eps
@@ -43,6 +44,7 @@ class PGA(Attack):
         self.pnorm = pnorm
         self.relative_alpha = relative_alpha
         self.self_explain = self_explain
+        self.clip_every_n_steps = clip_every_n_steps
 
     def compute_loss(self, outputs, target):
         if self.self_explain:
@@ -73,7 +75,7 @@ class PGA(Attack):
 
         adv_images = images.clone().detach()
 
-        for _ in range(self.steps):
+        for i in range(self.steps):
             adv_images.requires_grad = True
             # self.model.zero_grad() # not needed since we use torch.autograd.grad
             outputs = self.get_logits(adv_images)
@@ -124,7 +126,8 @@ class PGA(Attack):
 
                 adv_images = images + delta
 
-            self.clip_images_(adv_images)
+            if (i + 1) % self.clip_every_n_steps == 0:
+                self.clip_images_(adv_images)
 
         # self.model.zero_grad()
 
