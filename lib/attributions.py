@@ -1,3 +1,4 @@
+import copy
 import gc
 
 import numpy as np
@@ -208,125 +209,6 @@ def quantus_double_pullback_ascent_diff_explain_func(
     return attributions.detach().cpu().numpy()
 
 
-def fusiongrad_explainer(
-    model, inputs, targets, abs=False, normalise=False, *args, **kwargs
-) -> np.array:
-    """Wrapper aorund captum's FusionGrad implementation."""
-
-    std = kwargs.get("std", 0.5)
-    mean = kwargs.get("mean", 1.0)
-    n = kwargs.get("n", 10)
-    m = kwargs.get("m", 10)
-    sg_std = kwargs.get("sg_std", 0.5)
-    sg_mean = kwargs.get("sg_mean", 0.0)
-    posterior_mean = kwargs.get("posterior_mean", None)
-    noise_type = kwargs.get("noise_type", "multiplicative")
-    clip = kwargs.get("clip", False)
-
-    def _sample(
-        model, posterior_mean, std, distribution=None, noise_type="multiplicative"
-    ):
-        """Implmentation to sample a model."""
-
-        # Load model params.
-        model.load_state_dict(posterior_mean)
-
-        # If std is not zero, loop over each layer and add Gaussian noise.
-        if not std == 0.0:
-            with torch.no_grad():
-                for layer in model.parameters():
-                    if noise_type == "additive":
-                        layer.add_(distribution.sample(layer.size()).to(layer.device))
-                    elif noise_type == "multiplicative":
-                        layer.mul_(distribution.sample(layer.size()).to(layer.device))
-                    else:
-                        print(
-                            "Set NoiseGrad attribute 'noise_type' to either 'additive' or 'multiplicative' (str)."
-                        )
-
-        return model
-
-    # Creates a normal (also called Gaussian) distribution.
-    distribution = torch.distributions.normal.Normal(
-        loc=torch.as_tensor(mean, dtype=torch.float),
-        scale=torch.as_tensor(std, dtype=torch.float),
-    )
-
-    # Set model in evaluate mode.
-    model.to(kwargs.get("device", None))
-    model.eval()
-
-    if not isinstance(inputs, torch.Tensor):
-        inputs = (
-            torch.Tensor(inputs)
-            .reshape(
-                -1,
-                kwargs.get("nr_channels", 3),
-                kwargs.get("img_size", 224),
-                kwargs.get("img_size", 224),
-            )
-            .to(kwargs.get("device", None))
-        )
-    if not isinstance(targets, torch.Tensor):
-        targets = torch.as_tensor(targets).long().to(kwargs.get("device", None))
-
-    assert (
-        len(np.shape(inputs)) == 4
-    ), "Inputs should be shaped (nr_samples, nr_channels, img_size, img_size) e.g., (1, 3, 224, 224)."
-
-    if inputs.shape[0] > 1:
-        explanation = torch.zeros(
-            (
-                n,
-                m,
-                inputs.shape[0],
-                kwargs.get("img_size", 224),
-                kwargs.get("img_size", 224),
-            )
-        )
-    else:
-        explanation = torch.zeros(
-            (n, m, kwargs.get("img_size", 224), kwargs.get("img_size", 224))
-        )
-
-    for i in range(n):
-        model = _sample(
-            model=model,
-            posterior_mean=posterior_mean,
-            std=std,
-            distribution=distribution,
-            noise_type=noise_type,
-        )
-        for j in range(m):
-            inputs_noisy = inputs + torch.randn_like(inputs) * sg_std + sg_mean
-            if clip:
-                inputs_noisy = torch.clip(inputs_noisy, min=0.0, max=1.0)
-
-            explanation[i][j] = (
-                Saliency(model)
-                .attribute(inputs_noisy, targets, abs=abs)
-                .sum(axis=1)
-                .reshape(-1, kwargs.get("img_size", 224), kwargs.get("img_size", 224))
-                .cpu()
-                .data
-            )
-
-    explanation = explanation.mean(axis=(0, 1))
-
-    gc.collect()
-    torch.cuda.empty_cache()
-
-    if normalise:
-        explanation = quantus.normalise_func.normalise_by_negative(explanation)
-
-    if isinstance(explanation, torch.Tensor):
-        if explanation.requires_grad:
-            return explanation.cpu().detach().numpy()
-        return explanation.cpu().numpy()
-
-    return explanation
-
-
 def smoothgrad_explainer(
     model, inputs, targets, abs=False, normalise=False, *args, **kwargs
 ) -> np.ndarray:
@@ -344,25 +226,9 @@ def smoothgrad_explainer(
     if not isinstance(targets, torch.Tensor):
         targets = torch.as_tensor(targets).long().to(device)
 
-    # if kwargs.get("channels_first", True) is False and inputs.ndim == 4:
-    #     inputs = inputs.permute(0, 3, 1, 2)
-
-    # if len(inputs.shape) != 4:
-    #     inputs = inputs.reshape(
-    #         -1,
-    #         kwargs.get("nr_channels", 3),
-    #         kwargs.get("img_size", 224),
-    #         kwargs.get("img_size", 224),
-    #     )
-
     b, c, h, w = inputs.shape
-    reduce_channels = kwargs.get("reduce_channels", False)
 
-    if reduce_channels:
-        explanation = torch.zeros((n, b, h, w))
-    else:
-        explanation = torch.zeros((n, b, c, h, w))
-    # explanation = torch.zeros((n, b, c, h, w))
+    explanation = torch.zeros((n, b, c, h, w))
 
     saliency = Saliency(model)
 
@@ -373,20 +239,102 @@ def smoothgrad_explainer(
 
         attrs = saliency.attribute(inputs_noisy, target=targets, abs=abs)
 
-        if reduce_channels:
-            attrs = attrs.sum(dim=1)
-
         explanation[i] = attrs.detach().cpu()
 
     explanation = explanation.mean(dim=0)
 
-    # gc.collect()
-    # if torch.cuda.is_available():
-    #     torch.cuda.empty_cache()
+    if normalise:
+        explanation = quantus.normalise_func.normalise_by_negative(explanation)
+
+    if isinstance(explanation, torch.Tensor):
+        return explanation.detach().cpu().numpy()
+
+    return explanation
+
+
+def fusiongrad_explainer(
+    model, inputs, targets, abs=False, normalise=False, *args, **kwargs
+) -> np.ndarray:
+    std = kwargs.get("std", 0.5)
+    mean = kwargs.get("mean", 1.0)
+    n = kwargs.get("n", 10)
+    m = kwargs.get("m", 10)
+    sg_std = kwargs.get("sg_std", 0.15)
+    sg_mean = kwargs.get("sg_mean", 0.0)
+    posterior_mean = kwargs.get("posterior_mean", None)
+    noise_type = kwargs.get("noise_type", "multiplicative")
+    clip = kwargs.get("clip", False)
+    device = kwargs.get("device", None)
+
+    model.to(device)
+    model.eval()
+
+    if not isinstance(inputs, torch.Tensor):
+        inputs = torch.Tensor(inputs).to(device)
+    else:
+        inputs = inputs.to(device)
+
+    if not isinstance(targets, torch.Tensor):
+        targets = torch.as_tensor(targets).long().to(device)
+    else:
+        targets = targets.long().to(device)
+
+    b, c, h, w = inputs.shape
+
+    # zawsze pełny tensor (B, C, H, W)
+    explanation = torch.zeros((n, m, b, c, h, w))
+
+    if posterior_mean is None:
+        posterior_mean = copy.deepcopy(model.state_dict())
+
+    distribution = torch.distributions.normal.Normal(
+        loc=torch.as_tensor(mean, dtype=torch.float32, device=device),
+        scale=torch.as_tensor(std, dtype=torch.float32, device=device),
+    )
+
+    def _sample(model, posterior_mean, distribution, std, noise_type="multiplicative"):
+        model.load_state_dict(posterior_mean)
+
+        if std != 0.0:
+            with torch.no_grad():
+                for param in model.parameters():
+                    noise = distribution.sample(param.shape).to(param.device)
+
+                    if noise_type == "additive":
+                        param.add_(noise)
+                    elif noise_type == "multiplicative":
+                        param.mul_(noise)
+                    else:
+                        raise ValueError(
+                            "noise_type must be 'additive' or 'multiplicative'."
+                        )
+
+        return model
+
+    for i in range(n):
+        model = _sample(
+            model=model,
+            posterior_mean=posterior_mean,
+            distribution=distribution,
+            std=std,
+            noise_type=noise_type,
+        )
+
+        saliency = Saliency(model)
+
+        for j in range(m):
+            inputs_noisy = inputs + torch.randn_like(inputs) * sg_std + sg_mean
+
+            if clip:
+                inputs_noisy = torch.clamp(inputs_noisy, 0.0, 1.0)
+
+            attrs = saliency.attribute(inputs_noisy, target=targets, abs=abs)
+
+            explanation[i, j] = attrs.detach().cpu()
+
+    explanation = explanation.mean(dim=(0, 1))
 
     if normalise:
-        # import quantus
-
         explanation = quantus.normalise_func.normalise_by_negative(explanation)
 
     if isinstance(explanation, torch.Tensor):
