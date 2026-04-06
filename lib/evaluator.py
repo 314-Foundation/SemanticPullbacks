@@ -20,13 +20,21 @@ from lib.metrics import InfidelityOptimalScaling
 
 
 def default_explainers(
-    filter_explainers=None, gc_layer=None, pga_kwargs_counterfactual=None
+    filter_explainers=None,
+    gc_layer=None,
+    pga_kwargs_counterfactual=None,
+    reduce_axes=True,
 ):
     temperatures, default_pga_kwargs_counterfactual, pga_kwargs_grad, pga_kwargs_adv = (
         get_default_kwargs()
     )
     if pga_kwargs_counterfactual is None:
         pga_kwargs_counterfactual = default_pga_kwargs_counterfactual
+
+    if reduce_axes:
+        reduce_axes = (1,)
+    else:
+        reduce_axes = ()
 
     explainers = {
         "SoftPullback": (quantus_pullback_ascent_diff_explain_func, pga_kwargs_grad),
@@ -167,24 +175,42 @@ def default_explainers(
         "FusionGrad": (fusiongrad_explainer, {}),
         "SmoothGrad": (smoothgrad_explainer, {}),
         "SmoothPullback": (smoothgrad_explainer, {"use_pullback": True}),
-        "Gradient": (quantus.explain, {"method": "Gradient", "reduce_axes": ()}),
+        "Gradient": (
+            quantus.explain,
+            {"method": "Gradient", "reduce_axes": reduce_axes},
+        ),
         # "GradientOur": (quantus_gradient_ascent_diff_explain_func, pga_kwargs_grad),
-        "GradientShap": (quantus.explain, {"method": "GradientShap"}),
+        "GradientShap": (
+            quantus.explain,
+            {"method": "GradientShap", "reduce_axes": reduce_axes},
+        ),
         "IntegratedGradients": (
             quantus.explain,
-            {"method": "IntegratedGradients"},
+            {"method": "IntegratedGradients", "reduce_axes": reduce_axes},
         ),
-        "Saliency": (quantus.explain, {"method": "Saliency"}),
-        "DeepLift": (quantus.explain, {"method": "DeepLift"}),
-        "InputXGradient": (quantus.explain, {"method": "InputXGradient"}),
-        "Deconvolution": (quantus.explain, {"method": "Deconvolution"}),
+        "Saliency": (
+            quantus.explain,
+            {"method": "Saliency", "reduce_axes": reduce_axes},
+        ),
+        "DeepLift": (
+            quantus.explain,
+            {"method": "DeepLift", "reduce_axes": reduce_axes},
+        ),
+        "InputXGradient": (
+            quantus.explain,
+            {"method": "InputXGradient", "reduce_axes": reduce_axes},
+        ),
+        "Deconvolution": (
+            quantus.explain,
+            {"method": "Deconvolution", "reduce_axes": reduce_axes},
+        ),
         # "Lime": (quantus.explain, {"method": "Lime"}),  # way slower than others
         # # "Occlusion": (quantus.explain, {"method": "Occlusion"}),  # very, very slow
         # "KernelShap": (quantus.explain, {"method": "KernelShap"}),  # slow and bad
-        # # "LRP": (
-        # #     quantus.explain,
-        # #     {"method": "LRP"},
-        # # ),  # requires additional custom rules for many layers (even for nn.LayerNorm)
+        # "LRP": (
+        #     quantus.explain,
+        #     {"method": "LRP", "reduce_axes": reduce_axes},
+        # ),  # requires additional custom rules for many layers (even for nn.LayerNorm)
         # "DeepLiftShap": (
         #     quantus.explain,
         #     {"method": "DeepLiftShap"},
@@ -206,6 +232,7 @@ def default_explainers(
                     {
                         "method": "GuidedGradCam",
                         "gc_layer": gc_layer,
+                        "reduce_axes": reduce_axes,
                     },
                 ),
                 # "InternalInfluence": (  # CUDA runs out of memory even for small batches
