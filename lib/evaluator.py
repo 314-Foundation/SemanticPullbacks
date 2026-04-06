@@ -9,6 +9,7 @@ import torch
 
 from lib.attributions import (
     quantus_double_pullback_ascent_diff_explain_func,
+    quantus_gradient_ascent_diff_explain_func,
     quantus_pullback_ascent_diff_explain_func,
 )
 from lib.defaults import get_default_kwargs
@@ -16,23 +17,28 @@ from lib.helpers import l2_normalize_batch_numpy
 from lib.metrics import InfidelityOptimalScaling
 
 
-def default_explainers(filter_explainers=None, gc_layer=None):
-    temperatures, pga_kwargs_counterfactual, pga_kwargs_grad, pga_kwargs_adv = (
+def default_explainers(
+    filter_explainers=None, gc_layer=None, pga_kwargs_counterfactual=None
+):
+    temperatures, default_pga_kwargs_counterfactual, pga_kwargs_grad, pga_kwargs_adv = (
         get_default_kwargs()
     )
+    if pga_kwargs_counterfactual is None:
+        pga_kwargs_counterfactual = default_pga_kwargs_counterfactual
+
     explainers = {
         "SoftPullback": (quantus_pullback_ascent_diff_explain_func, pga_kwargs_grad),
         # "SoftPullbackMulti": (
         #     quantus_pullback_ascent_diff_explain_func,
         #     {**pga_kwargs_grad, "steps": 5},
         # ),
-        "DoublePullback": (
-            quantus_double_pullback_ascent_diff_explain_func,
-            {
-                "pga_kwargs_1": pga_kwargs_grad,
-                "pga_kwargs_2": pga_kwargs_grad,
-            },
-        ),
+        # "DoublePullback": (
+        #     quantus_double_pullback_ascent_diff_explain_func,
+        #     {
+        #         "pga_kwargs_1": pga_kwargs_grad,
+        #         "pga_kwargs_2": pga_kwargs_grad,
+        #     },
+        # ),
         # "DoublePullbackBis": (
         #     quantus_double_pullback_ascent_diff_explain_func,
         #     {
@@ -45,10 +51,10 @@ def default_explainers(filter_explainers=None, gc_layer=None):
         #         "pga_kwargs_2": pga_kwargs_grad,
         #     },
         # ),
-        "PullbackAscent": (
-            quantus_pullback_ascent_diff_explain_func,
-            pga_kwargs_counterfactual,
-        ),
+        # "PullbackAscent": (
+        #     quantus_pullback_ascent_diff_explain_func,
+        #     pga_kwargs_counterfactual,
+        # ),
         # "PullbackAscentBis": (
         #     quantus_pullback_ascent_diff_explain_func,
         #     {
@@ -61,6 +67,38 @@ def default_explainers(filter_explainers=None, gc_layer=None):
             {
                 **pga_kwargs_counterfactual,
                 "clip_margin": None,
+            },
+        ),
+        "PullbackAscentClipLast": (
+            quantus_pullback_ascent_diff_explain_func,
+            {
+                **pga_kwargs_counterfactual,
+                "clip_last_only": True,
+                # "clip_margin": 0.0,
+                # "alpha": 20,
+                # "clip_every_n_steps": 5,
+                # "steps": 5,
+            },
+        ),
+        # "GradientAscent": (
+        #     quantus_gradient_ascent_diff_explain_func,
+        #     {
+        #         **pga_kwargs_counterfactual,
+        #         # "clip_margin": None,
+        #     },
+        # ),
+        "GradientAscentNoClip": (
+            quantus_gradient_ascent_diff_explain_func,
+            {
+                **pga_kwargs_counterfactual,
+                "clip_margin": None,
+            },
+        ),
+        "GradientAscentClipLast": (
+            quantus_gradient_ascent_diff_explain_func,
+            {
+                **pga_kwargs_counterfactual,
+                "clip_last_only": True,
             },
         ),
         # "PullbackAscentBisNoClip": (

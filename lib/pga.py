@@ -25,6 +25,7 @@ class PGA(Attack):
         clip_margin=0.0,  # set to None to disable clipping to the [-1, 1] range
         eps_for_division=1e-20,
         clip_every_n_steps=1,
+        clip_last_only=False,
     ):
         super().__init__("PGA", model)
         self.eps = eps
@@ -44,6 +45,9 @@ class PGA(Attack):
         self.pnorm = pnorm
         self.relative_alpha = relative_alpha
         self.self_explain = self_explain
+
+        if clip_last_only:
+            clip_every_n_steps = steps
         self.clip_every_n_steps = clip_every_n_steps
 
     def compute_loss(self, outputs, target):
