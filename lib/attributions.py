@@ -272,9 +272,13 @@ def fusiongrad_explainer(
     noise_type = kwargs.get("noise_type", "multiplicative")
     clip = kwargs.get("clip", False)
     device = kwargs.get("device", None)
+    use_pullback = kwargs.get("use_pullback", False)
 
     model.to(device)
     model.eval()
+
+    if use_pullback:
+        set_module_standard_backward_(model, standard_backward=False)
 
     original_state = copy.deepcopy(model.state_dict())
 
@@ -355,6 +359,9 @@ def fusiongrad_explainer(
 
     finally:
         model.load_state_dict(original_state)
+
+        if use_pullback:
+            set_module_standard_backward_(model, standard_backward=True)
 
         gc.collect()
         if torch.cuda.is_available():

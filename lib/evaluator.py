@@ -175,6 +175,7 @@ def default_explainers(
         "FusionGrad": (fusiongrad_explainer, {}),
         "SmoothGrad": (smoothgrad_explainer, {}),
         "SmoothPullback": (smoothgrad_explainer, {"use_pullback": True}),
+        "FusionPullback": (fusiongrad_explainer, {"use_pullback": True}),
         "Gradient": (
             quantus.explain,
             {"method": "Gradient", "reduce_axes": reduce_axes},
