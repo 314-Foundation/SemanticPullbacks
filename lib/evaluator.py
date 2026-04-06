@@ -8,9 +8,11 @@ import quantus
 import torch
 
 from lib.attributions import (
+    fusiongrad_explainer,
     quantus_double_pullback_ascent_diff_explain_func,
     quantus_gradient_ascent_diff_explain_func,
     quantus_pullback_ascent_diff_explain_func,
+    smoothgrad_explainer,
 )
 from lib.defaults import get_default_kwargs
 from lib.helpers import l2_normalize_batch_numpy
@@ -69,6 +71,14 @@ def default_explainers(
                 "clip_margin": None,
             },
         ),
+        "PullbackAscentBisNoClip": (
+            quantus_pullback_ascent_diff_explain_func,
+            {
+                **pga_kwargs_counterfactual,
+                "clip_margin": None,
+                "steps": 10,
+            },
+        ),
         "PullbackAscentClipLast": (
             quantus_pullback_ascent_diff_explain_func,
             {
@@ -78,6 +88,18 @@ def default_explainers(
                 # "alpha": 20,
                 # "clip_every_n_steps": 5,
                 # "steps": 5,
+            },
+        ),
+        "PullbackAscentBisClipLast": (
+            quantus_pullback_ascent_diff_explain_func,
+            {
+                **pga_kwargs_counterfactual,
+                "clip_last_only": True,
+                # "clip_last_only": Tre,
+                # "clip_margin": 0.0,
+                # "alpha": 20,
+                # "clip_every_n_steps": 5,
+                "steps": 10,
             },
         ),
         # "GradientAscent": (
@@ -141,6 +163,8 @@ def default_explainers(
         #         "clip_margin": None,
         #     },
         # ),
+        "FusionGrad": (fusiongrad_explainer, {}),
+        "SmoothGrad": (smoothgrad_explainer, {}),
         "Gradient": (quantus.explain, {"method": "Gradient"}),
         "GradientShap": (quantus.explain, {"method": "GradientShap"}),
         "IntegratedGradients": (

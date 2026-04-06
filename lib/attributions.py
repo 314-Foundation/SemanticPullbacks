@@ -325,3 +325,71 @@ def fusiongrad_explainer(
         return explanation.cpu().numpy()
 
     return explanation
+
+
+def smoothgrad_explainer(
+    model, inputs, targets, abs=False, normalise=False, *args, **kwargs
+) -> np.ndarray:
+    sg_std = kwargs.get("sg_std", 0.15)
+    sg_mean = kwargs.get("sg_mean", 0.0)
+    n = kwargs.get("n", 50)
+    clip = kwargs.get("clip", False)
+    device = kwargs.get("device", None)
+
+    model.to(device)
+    model.eval()
+
+    if not isinstance(inputs, torch.Tensor):
+        inputs = torch.Tensor(inputs).to(device)
+    if not isinstance(targets, torch.Tensor):
+        targets = torch.as_tensor(targets).long().to(device)
+
+    # if kwargs.get("channels_first", True) is False and inputs.ndim == 4:
+    #     inputs = inputs.permute(0, 3, 1, 2)
+
+    # if len(inputs.shape) != 4:
+    #     inputs = inputs.reshape(
+    #         -1,
+    #         kwargs.get("nr_channels", 3),
+    #         kwargs.get("img_size", 224),
+    #         kwargs.get("img_size", 224),
+    #     )
+
+    b, c, h, w = inputs.shape
+    reduce_channels = kwargs.get("reduce_channels", False)
+
+    if reduce_channels:
+        explanation = torch.zeros((n, b, h, w))
+    else:
+        explanation = torch.zeros((n, b, c, h, w))
+    # explanation = torch.zeros((n, b, c, h, w))
+
+    saliency = Saliency(model)
+
+    for i in range(n):
+        inputs_noisy = inputs + torch.randn_like(inputs) * sg_std + sg_mean
+        if clip:
+            inputs_noisy = torch.clamp(inputs_noisy, 0.0, 1.0)
+
+        attrs = saliency.attribute(inputs_noisy, target=targets, abs=abs)
+
+        if reduce_channels:
+            attrs = attrs.sum(dim=1)
+
+        explanation[i] = attrs.detach().cpu()
+
+    explanation = explanation.mean(dim=0)
+
+    # gc.collect()
+    # if torch.cuda.is_available():
+    #     torch.cuda.empty_cache()
+
+    if normalise:
+        # import quantus
+
+        explanation = quantus.normalise_func.normalise_by_negative(explanation)
+
+    if isinstance(explanation, torch.Tensor):
+        return explanation.detach().cpu().numpy()
+
+    return explanation
