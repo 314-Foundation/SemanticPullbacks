@@ -154,15 +154,16 @@ def default_explainers(
         #         "clip_margin": None,
         #     },
         # ),
-        # "PullbackAscentNoAlphaNoClip": (
-        #     quantus_pullback_ascent_diff_explain_func,
-        #     {
-        #         **pga_kwargs_counterfactual,
-        #         "alpha": None,
-        #         "normalize_step": False,
-        #         "clip_margin": None,
-        #     },
-        # ),
+        "PullbackAscentNoAlphaNoClip": (
+            quantus_pullback_ascent_diff_explain_func,
+            {
+                **pga_kwargs_counterfactual,
+                "alpha": None,
+                "normalize_step": False,
+                "clip_margin": None,
+                "steps": 5,
+            },
+        ),
         "FusionGrad": (fusiongrad_explainer, {}),
         "SmoothGrad": (smoothgrad_explainer, {}),
         "Gradient": (quantus.explain, {"method": "Gradient"}),
