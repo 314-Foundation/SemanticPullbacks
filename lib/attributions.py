@@ -262,7 +262,7 @@ def smoothgrad_explainer(
 def fusiongrad_explainer(
     model, inputs, targets, abs=False, normalise=False, *args, **kwargs
 ) -> np.ndarray:
-    std = kwargs.get("std", 0.5)
+    std = kwargs.get("std", 0.1)
     mean = kwargs.get("mean", 1.0)
     n = kwargs.get("n", 10)
     m = kwargs.get("m", 10)
@@ -276,75 +276,86 @@ def fusiongrad_explainer(
     model.to(device)
     model.eval()
 
-    if not isinstance(inputs, torch.Tensor):
-        inputs = torch.Tensor(inputs).to(device)
-    else:
-        inputs = inputs.to(device)
+    original_state = copy.deepcopy(model.state_dict())
 
-    if not isinstance(targets, torch.Tensor):
-        targets = torch.as_tensor(targets).long().to(device)
-    else:
-        targets = targets.long().to(device)
+    try:
+        if not isinstance(inputs, torch.Tensor):
+            inputs = torch.Tensor(inputs).to(device)
+        else:
+            inputs = inputs.to(device)
 
-    b, c, h, w = inputs.shape
+        if not isinstance(targets, torch.Tensor):
+            targets = torch.as_tensor(targets).long().to(device)
+        else:
+            targets = targets.long().to(device)
 
-    # zawsze pełny tensor (B, C, H, W)
-    explanation = torch.zeros((n, m, b, c, h, w))
+        b, c, h, w = inputs.shape
 
-    if posterior_mean is None:
-        posterior_mean = copy.deepcopy(model.state_dict())
+        explanation = torch.zeros((n, m, b, c, h, w))
 
-    distribution = torch.distributions.normal.Normal(
-        loc=torch.as_tensor(mean, dtype=torch.float32, device=device),
-        scale=torch.as_tensor(std, dtype=torch.float32, device=device),
-    )
+        if posterior_mean is None:
+            posterior_mean = copy.deepcopy(model.state_dict())
 
-    def _sample(model, posterior_mean, distribution, std, noise_type="multiplicative"):
-        model.load_state_dict(posterior_mean)
-
-        if std != 0.0:
-            with torch.no_grad():
-                for param in model.parameters():
-                    noise = distribution.sample(param.shape).to(param.device)
-
-                    if noise_type == "additive":
-                        param.add_(noise)
-                    elif noise_type == "multiplicative":
-                        param.mul_(noise)
-                    else:
-                        raise ValueError(
-                            "noise_type must be 'additive' or 'multiplicative'."
-                        )
-
-        return model
-
-    for i in range(n):
-        model = _sample(
-            model=model,
-            posterior_mean=posterior_mean,
-            distribution=distribution,
-            std=std,
-            noise_type=noise_type,
+        distribution = torch.distributions.normal.Normal(
+            loc=torch.as_tensor(mean, dtype=torch.float32, device=device),
+            scale=torch.as_tensor(std + 1e-6, dtype=torch.float32, device=device),
         )
 
-        saliency = Saliency(model)
+        def _sample(
+            model, posterior_mean, distribution, std, noise_type="multiplicative"
+        ):
+            model.load_state_dict(posterior_mean)
 
-        for j in range(m):
-            inputs_noisy = inputs + torch.randn_like(inputs) * sg_std + sg_mean
+            if std != 0.0:
+                with torch.no_grad():
+                    for param in model.parameters():
+                        noise = distribution.sample(param.shape).to(param.device)
 
-            if clip:
-                inputs_noisy = torch.clamp(inputs_noisy, 0.0, 1.0)
+                        if noise_type == "additive":
+                            param.add_(noise)
+                        elif noise_type == "multiplicative":
+                            param.mul_(noise)
+                        else:
+                            raise ValueError(
+                                "noise_type must be 'additive' or 'multiplicative'."
+                            )
 
-            attrs = saliency.attribute(inputs_noisy, target=targets, abs=abs)
+            return model
 
-            explanation[i, j] = attrs.detach().cpu()
+        for i in range(n):
+            model = _sample(
+                model=model,
+                posterior_mean=posterior_mean,
+                distribution=distribution,
+                std=std,
+                noise_type=noise_type,
+            )
 
-    explanation = explanation.mean(dim=(0, 1))
+            saliency = Saliency(model)
 
-    if normalise:
-        explanation = quantus.normalise_func.normalise_by_negative(explanation)
+            for j in range(m):
+                inputs_noisy = inputs + torch.randn_like(inputs) * sg_std + sg_mean
 
-    if isinstance(explanation, torch.Tensor):
-        return explanation.detach().cpu().numpy()
+                if clip:
+                    inputs_noisy = torch.clamp(inputs_noisy, 0.0, 1.0)
 
-    return explanation
+                attrs = saliency.attribute(inputs_noisy, target=targets, abs=abs)
+
+                explanation[i, j] = attrs.detach().cpu()
+
+        explanation = explanation.mean(dim=(0, 1))
+
+        if normalise:
+            explanation = quantus.normalise_func.normalise_by_negative(explanation)
+
+        if isinstance(explanation, torch.Tensor):
+            return explanation.detach().cpu().numpy()
+
+        return explanation
+
+    finally:
+        model.load_state_dict(original_state)
+
+        gc.collect()
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
