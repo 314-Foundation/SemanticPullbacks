@@ -217,9 +217,13 @@ def smoothgrad_explainer(
     n = kwargs.get("n", 50)
     clip = kwargs.get("clip", False)
     device = kwargs.get("device", None)
+    use_pullback = kwargs.get("use_pullback", False)
 
     model.to(device)
     model.eval()
+
+    if use_pullback:
+        set_module_standard_backward_(model, standard_backward=False)
 
     if not isinstance(inputs, torch.Tensor):
         inputs = torch.Tensor(inputs).to(device)
@@ -248,6 +252,9 @@ def smoothgrad_explainer(
 
     if isinstance(explanation, torch.Tensor):
         return explanation.detach().cpu().numpy()
+
+    if use_pullback:
+        set_module_standard_backward_(model, standard_backward=True)
 
     return explanation
 

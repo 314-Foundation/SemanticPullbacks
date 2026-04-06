@@ -164,8 +164,10 @@ def default_explainers(
                 "steps": 5,
             },
         ),
+        # "GradientOur": (quantus_gradient_ascent_diff_explain_func, pga_kwargs_grad),
         "FusionGrad": (fusiongrad_explainer, {}),
         "SmoothGrad": (smoothgrad_explainer, {}),
+        "SmoothPullback": (smoothgrad_explainer, {"use_pullback": True}),
         "Gradient": (quantus.explain, {"method": "Gradient"}),
         "GradientShap": (quantus.explain, {"method": "GradientShap"}),
         "IntegratedGradients": (
