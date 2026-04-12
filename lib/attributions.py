@@ -239,7 +239,7 @@ def smoothgrad_explainer(
     for i in range(n):
         inputs_noisy = inputs + torch.randn_like(inputs) * sg_std + sg_mean
         if clip:
-            inputs_noisy = torch.clamp(inputs_noisy, 0.0, 1.0)
+            inputs_noisy = torch.clamp(inputs_noisy, -1.0, 1.0)
 
         attrs = saliency.attribute(inputs_noisy, target=targets, abs=abs)
 
@@ -341,7 +341,7 @@ def fusiongrad_explainer(
                 inputs_noisy = inputs + torch.randn_like(inputs) * sg_std + sg_mean
 
                 if clip:
-                    inputs_noisy = torch.clamp(inputs_noisy, 0.0, 1.0)
+                    inputs_noisy = torch.clamp(inputs_noisy, -1.0, 1.0)
 
                 attrs = saliency.attribute(inputs_noisy, target=targets, abs=abs)
 

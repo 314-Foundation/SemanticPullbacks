@@ -176,10 +176,10 @@ def default_explainers(
         "SmoothGrad": (smoothgrad_explainer, {}),
         "SmoothPullback": (smoothgrad_explainer, {"use_pullback": True}),
         "FusionPullback": (fusiongrad_explainer, {"use_pullback": True}),
-        "UnreducedGradient": (
-            quantus.explain,
-            {"method": "Gradient", "reduce_axes": ()},
-        ),
+        # "UnreducedGradient": (
+        #     quantus.explain,
+        #     {"method": "Gradient", "reduce_axes": ()},
+        # ),
         "Gradient": (
             quantus.explain,
             {"method": "Gradient", "reduce_axes": reduce_axes},
@@ -266,6 +266,7 @@ def default_metrics(filter_metrics=None):
         # "infidelity": quantus.Infidelity(
         "infidelity": InfidelityOptimalScaling(
             perturb_baseline="uniform",
+            # perturb_baseline=0.0,
             # perturb_func=quantus.perturb_func.baseline_replacement_by_indices,
             perturb_func_kwargs={"uniform_low": -1.0, "uniform_high": 1.0},
             n_perturb_samples=5,
@@ -277,32 +278,45 @@ def default_metrics(filter_metrics=None):
             # normalise_func=l2_normalize_batch_numpy,
             # normalise_func=normalise_by_average_second_moment_estimate,
         ),
-        "faithfulness_correlation": quantus.FaithfulnessCorrelation(
-            nr_runs=100,
-            subset_size=12544,
-            return_aggregate=False,
-            # perturb_baseline="uniform",
-            # normalise=True,
-            # normalise_func=l2_normalize_batch_numpy,
+        "faithfulness_estimate": quantus.FaithfulnessEstimate(
+            # perturb_func=qua ntus.perturb_func.baseline_replacement_by_indices,
+            # similarity_func=quantus.similarity_func.correlation_pearson,
+            features_in_step=12544 // 4,
+            # features_in_step=12544,
+            # features_in_step=224,
+            # perturb_baseline="black",
+            perturb_baseline=0.0,
+            # abs=False,
+            abs=True,
+            # normalise=False,
         ),
         "monotonicity_correlation": quantus.MonotonicityCorrelation(
             nr_samples=10,
-            features_in_step=12544,  # 224*224 / 4
-            # perturb_baseline="uniform",
-            # abs=False,
+            # features_in_step=12544,  # 224*224 / 4
+            features_in_step=12544 // 4,
+            # features_in_step=224,
+            perturb_baseline="uniform",
+            perturb_func_kwargs={"uniform_low": -1.0, "uniform_high": 1.0},
+            # perturb_baseline=0.0,
+            abs=True,
             # normalise=True,
             # normalise_func=l2_normalize_batch_numpy,
             # perturb_func=quantus.perturb_func.baseline_replacement_by_indices,
             # similarity_func=quantus.similarity_func.correlation_spearman,
         ),
-        "faithfulness_estimate": quantus.FaithfulnessEstimate(
-            # perturb_func=qua ntus.perturb_func.baseline_replacement_by_indices,
-            # similarity_func=quantus.similarity_func.correlation_pearson,
-            features_in_step=12544 // 4,
-            # features_in_step=224,
-            # perturb_baseline="black",
+        "faithfulness_correlation": quantus.FaithfulnessCorrelation(
+            nr_runs=100,
+            subset_size=12544,
+            # subset_size=12544 // 4,
+            # subset_size=224,
+            return_aggregate=False,
+            # perturb_baseline="uniform",
+            # perturb_baseline=0.0,
+            perturb_baseline=-1.0,
+            normalise=False,
+            # abs=True,
             # abs=False,
-            # normalise=False,
+            # normalise_func=l2_normalize_batch_numpy,
         ),
         # "pixel_flipping": quantus.PixelFlipping(
         #     features_in_step=12544 // 4,
@@ -391,11 +405,12 @@ def default_metrics(filter_metrics=None):
 
 
 class QuantusEvaluator:
-    def __init__(self, model, metrics, explainers, device):
+    def __init__(self, model, metrics, explainers, device, random_labels=False):
         self.model = model
         self.device = device
         self.metrics = metrics
         self.explainers = explainers
+        self.random_labels = random_labels
 
     def precompute_attributions(self, x_batch, y_batch):
         self.attributions = {}
@@ -475,6 +490,10 @@ class QuantusEvaluator:
 
             x_batch = x_batch.numpy()
             y_batch = y_batch.numpy()
+            if self.random_labels:
+                y_batch = np.random.randint(
+                    0, 1000, size=y_batch.shape, dtype=y_batch.dtype
+                )
 
             batch_results = self.evaluate_batch(
                 x_batch, y_batch, precompute_attributions=True
