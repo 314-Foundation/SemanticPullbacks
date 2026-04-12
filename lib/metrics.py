@@ -135,3 +135,113 @@ class InfidelityOptimalScaling(quantus.Infidelity):
         infidelity = infidelity / total_perturbations
 
         return infidelity
+
+
+class FaithfulnessCorrelationPatches(quantus.FaithfulnessCorrelation):
+    def __init__(
+        self,
+        perturb_patch_sizes=(56,),
+        # nr_runs=10,
+        **kwargs,
+    ):
+        super().__init__(**kwargs)
+        self.perturb_patch_sizes = perturb_patch_sizes
+        # self.nr_runs = nr_runs
+
+    def evaluate_batch(
+        self,
+        model,
+        x_batch: np.ndarray,
+        y_batch: np.ndarray,
+        a_batch: np.ndarray,
+        **kwargs,
+    ):
+        if x_batch.shape != a_batch.shape:
+            a_batch = np.broadcast_to(a_batch, x_batch.shape)
+
+        batch_size = a_batch.shape[0]
+
+        x_input = model.shape_input(
+            x_batch, x_batch.shape, channel_first=True, batched=True
+        )
+        y_pred = model.predict(x_input)[np.arange(batch_size), y_batch]
+
+        pred_deltas = []
+        att_sums = []
+
+        for _ in range(self.nr_runs):
+            for patch_size in self.perturb_patch_sizes:
+                x_h, x_w = x_batch.shape[-2:]
+
+                padding_h = utils.get_padding_size(x_h, patch_size)
+                padding_w = utils.get_padding_size(x_w, patch_size)
+
+                x_padded = utils._pad_array(
+                    x_batch,
+                    ((0, 0), (0, 0), padding_h, padding_w),
+                    mode="edge",
+                    padded_axes=np.arange(len(x_batch.shape)),
+                )
+                a_padded = utils._pad_array(
+                    a_batch,
+                    ((0, 0), (0, 0), padding_h, padding_w),
+                    mode="edge",
+                    padded_axes=np.arange(len(a_batch.shape)),
+                )
+
+                block_indices = list(utils.get_block_indices(x_padded, patch_size))
+                if len(block_indices) == 0:
+                    continue
+
+                # different random patch for each example in batch
+                a_ix = np.stack(
+                    [
+                        np.asarray(
+                            block_indices[np.random.randint(len(block_indices))]
+                        ).reshape(-1)
+                        # np.asarray(block_indices[2]).reshape(-1)
+                        for _ in range(batch_size)
+                    ],
+                    axis=0,
+                )
+
+                x_padded_shape = x_padded.shape
+                x_perturbed_padded = self.perturb_func(
+                    arr=x_padded.reshape(batch_size, -1),
+                    indices=a_ix,
+                ).reshape(*x_padded_shape)
+
+                x_perturbed = x_perturbed_padded[
+                    :,
+                    :,
+                    padding_h[0] : x_perturbed_padded.shape[2] - padding_h[1],
+                    padding_w[0] : x_perturbed_padded.shape[3] - padding_w[1],
+                ]
+
+                x_input = model.shape_input(
+                    x_perturbed, x_batch.shape, channel_first=True, batched=True
+                )
+                y_pred_perturb = model.predict(x_input)[np.arange(batch_size), y_batch]
+
+                pred_deltas.append(
+                    np.asarray(y_pred - y_pred_perturb).reshape(batch_size)
+                )
+
+                flat_a_padded = a_padded.reshape(batch_size, -1)
+                att_sums.append(
+                    flat_a_padded[np.arange(batch_size)[:, None], a_ix].sum(axis=-1)
+                )
+
+        if len(pred_deltas) == 0:
+            return np.zeros(batch_size, dtype=np.float64).tolist()
+
+        pred_deltas = np.stack(pred_deltas, axis=1)
+        att_sums = np.stack(att_sums, axis=1)
+
+        similarity = self.similarity_func(
+            a=att_sums,
+            b=pred_deltas,
+            batched=True,
+        )
+
+        return similarity.tolist()

@@ -4,6 +4,9 @@ import matplotlib.pyplot as plt
 import numpy as np
 import torch
 import torchvision.utils as vutils
+from quantus.functions.perturb_func import batch_baseline_replacement_by_indices
+from quantus.helpers import utils
+from quantus.helpers.perturbation_utils import make_perturb_func
 from torch import nn
 
 
@@ -321,3 +324,77 @@ def as_cmap_rgb(x, cmap_name="seismic", mode="mean", normalise=True):
         x = normalise_by_negative_batch(x)
     x = batched_cmap_rgb(x.cpu(), cmap_name=cmap_name)
     return x
+
+
+def perturb_batch_with_random_patches(
+    x_batch: np.ndarray,
+    # perturb_func,
+    patch_size=56,
+):
+    """
+    Perturb a batch of images by applying a random patch perturbation
+    independently to each example.
+
+    Parameters
+    ----------
+    x_batch : np.ndarray
+        Input batch of shape (B, C, H, W).
+    perturb_func : callable
+        Function with Quantus-like signature:
+            perturb_func(arr=<flattened batch>, indices=<per-example indices>)
+    patch_size : int
+        Size of the square patch.
+
+    Returns
+    -------
+    x_perturbed : np.ndarray
+        Perturbed batch of shape (B, C, H, W).
+    """
+    # batch_baseline_replacement_by_indices
+    perturb_func = make_perturb_func(
+        batch_baseline_replacement_by_indices, None, perturb_baseline=0.0
+    )
+
+    batch_size = x_batch.shape[0]
+    x_h, x_w = x_batch.shape[-2:]
+
+    padding_h = utils.get_padding_size(x_h, patch_size)
+    padding_w = utils.get_padding_size(x_w, patch_size)
+
+    x_padded = utils._pad_array(
+        x_batch,
+        ((0, 0), (0, 0), padding_h, padding_w),
+        mode="edge",
+        padded_axes=np.arange(len(x_batch.shape)),
+    )
+
+    x_padded_shape = x_padded.shape
+    flat_x_padded = x_padded.reshape(batch_size, -1)
+
+    block_indices = list(utils.get_block_indices(x_padded, patch_size))
+    if len(block_indices) == 0:
+        return x_batch.copy()
+
+    # different random patch for each example in batch
+    a_ix = np.stack(
+        [
+            np.asarray(block_indices[np.random.randint(len(block_indices))]).reshape(-1)
+            # np.asarray(block_indices[2]).reshape(-1)
+            for _ in range(batch_size)
+        ],
+        axis=0,
+    )
+
+    x_perturbed_padded = perturb_func(
+        arr=flat_x_padded,
+        indices=a_ix,
+    ).reshape(*x_padded_shape)
+
+    x_perturbed = x_perturbed_padded[
+        :,
+        :,
+        padding_h[0] : x_perturbed_padded.shape[2] - padding_h[1],
+        padding_w[0] : x_perturbed_padded.shape[3] - padding_w[1],
+    ]
+
+    return x_perturbed

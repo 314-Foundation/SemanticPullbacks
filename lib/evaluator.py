@@ -16,7 +16,7 @@ from lib.attributions import (
 )
 from lib.defaults import get_default_kwargs
 from lib.helpers import l2_normalize_batch_numpy
-from lib.metrics import InfidelityOptimalScaling
+from lib.metrics import FaithfulnessCorrelationPatches, InfidelityOptimalScaling
 
 
 def default_explainers(
@@ -304,17 +304,20 @@ def default_metrics(filter_metrics=None):
             # perturb_func=quantus.perturb_func.baseline_replacement_by_indices,
             # similarity_func=quantus.similarity_func.correlation_spearman,
         ),
-        "faithfulness_correlation": quantus.FaithfulnessCorrelation(
-            nr_runs=100,
+        # "faithfulness_correlation": quantus.FaithfulnessCorrelation(
+        "faithfulness_correlation": FaithfulnessCorrelationPatches(
+            # nr_runs=100,
+            nr_runs=50,
             subset_size=12544,
             # subset_size=12544 // 4,
             # subset_size=224,
             return_aggregate=False,
             # perturb_baseline="uniform",
-            # perturb_baseline=0.0,
-            perturb_baseline=-1.0,
+            perturb_baseline=0.0,
+            # perturb_baseline=-1.0,
             normalise=False,
-            # abs=True,
+            perturb_patch_sizes=[56],
+            abs=True,
             # abs=False,
             # normalise_func=l2_normalize_batch_numpy,
         ),
