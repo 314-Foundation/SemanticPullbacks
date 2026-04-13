@@ -23,7 +23,7 @@ def default_explainers(
     filter_explainers=None,
     gc_layer=None,
     pga_kwargs_counterfactual=None,
-    reduce_axes=True,
+    reduce_axes=False,
 ):
     temperatures, default_pga_kwargs_counterfactual, pga_kwargs_grad, pga_kwargs_adv = (
         get_default_kwargs()
