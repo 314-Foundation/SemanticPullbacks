@@ -169,44 +169,44 @@ class FaithfulnessCorrelationPatches(quantus.FaithfulnessCorrelation):
         pred_deltas = []
         att_sums = []
 
-        for _ in range(self.nr_runs):
-            for patch_size in self.perturb_patch_sizes:
-                x_h, x_w = x_batch.shape[-2:]
+        # for _ in range(self.nr_runs):
+        for patch_size in self.perturb_patch_sizes:
+            x_h, x_w = x_batch.shape[-2:]
 
-                padding_h = utils.get_padding_size(x_h, patch_size)
-                padding_w = utils.get_padding_size(x_w, patch_size)
+            padding_h = utils.get_padding_size(x_h, patch_size)
+            padding_w = utils.get_padding_size(x_w, patch_size)
 
-                x_padded = utils._pad_array(
-                    x_batch,
-                    ((0, 0), (0, 0), padding_h, padding_w),
-                    mode="edge",
-                    padded_axes=np.arange(len(x_batch.shape)),
-                )
-                a_padded = utils._pad_array(
-                    a_batch,
-                    ((0, 0), (0, 0), padding_h, padding_w),
-                    mode="edge",
-                    padded_axes=np.arange(len(a_batch.shape)),
-                )
+            x_padded = utils._pad_array(
+                x_batch,
+                ((0, 0), (0, 0), padding_h, padding_w),
+                mode="edge",
+                padded_axes=np.arange(len(x_batch.shape)),
+            )
+            a_padded = utils._pad_array(
+                a_batch,
+                ((0, 0), (0, 0), padding_h, padding_w),
+                mode="edge",
+                padded_axes=np.arange(len(a_batch.shape)),
+            )
 
-                block_indices = list(utils.get_block_indices(x_padded, patch_size))
-                if len(block_indices) == 0:
-                    continue
+            block_indices = list(utils.get_block_indices(x_padded, patch_size))
+            if len(block_indices) == 0:
+                continue
 
-                # # different random patch for each example in batch
-                # a_ix = np.stack(
-                #     [
-                #         np.asarray(
-                #             block_indices[np.random.randint(len(block_indices))]
-                #         ).reshape(-1)
-                #         # np.asarray(block_indices[2]).reshape(-1)
-                #         for _ in range(batch_size)
-                #     ],
-                #     axis=0,
-                # )
-                # same random patch for all examples in batch
-                a_ix = block_indices[np.random.randint(len(block_indices))]
-
+            # # different random patch for each example in batch
+            # a_ix = np.stack(
+            #     [
+            #         np.asarray(
+            #             block_indices[np.random.randint(len(block_indices))]
+            #         ).reshape(-1)
+            #         # np.asarray(block_indices[2]).reshape(-1)
+            #         for _ in range(batch_size)
+            #     ],
+            #     axis=0,
+            # )
+            # same random patch for all examples in batch
+            for a_ix in block_indices:
+                # a_ix = block_indices[np.random.randint(len(block_indices))]
                 x_padded_shape = x_padded.shape
                 x_perturbed_padded = self.perturb_func(
                     arr=x_padded.reshape(batch_size, -1),
