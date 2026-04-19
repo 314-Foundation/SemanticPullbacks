@@ -193,17 +193,19 @@ class FaithfulnessCorrelationPatches(quantus.FaithfulnessCorrelation):
                 if len(block_indices) == 0:
                     continue
 
-                # different random patch for each example in batch
-                a_ix = np.stack(
-                    [
-                        np.asarray(
-                            block_indices[np.random.randint(len(block_indices))]
-                        ).reshape(-1)
-                        # np.asarray(block_indices[2]).reshape(-1)
-                        for _ in range(batch_size)
-                    ],
-                    axis=0,
-                )
+                # # different random patch for each example in batch
+                # a_ix = np.stack(
+                #     [
+                #         np.asarray(
+                #             block_indices[np.random.randint(len(block_indices))]
+                #         ).reshape(-1)
+                #         # np.asarray(block_indices[2]).reshape(-1)
+                #         for _ in range(batch_size)
+                #     ],
+                #     axis=0,
+                # )
+                # same random patch for all examples in batch
+                a_ix = block_indices[np.random.randint(len(block_indices))]
 
                 x_padded_shape = x_padded.shape
                 x_perturbed_padded = self.perturb_func(
