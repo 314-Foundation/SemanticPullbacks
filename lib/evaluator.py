@@ -280,8 +280,8 @@ def default_metrics(filter_metrics=None):
         ),
         # "faithfulness_correlation": quantus.FaithfulnessCorrelation(
         "faithfulness_correlation": FaithfulnessCorrelationPatches(
-            # nr_runs=100,
-            nr_runs=50,
+            nr_runs=100,
+            # nr_runs=50,
             subset_size=12544,
             # subset_size=12544 // 4,
             # subset_size=224,
