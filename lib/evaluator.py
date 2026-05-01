@@ -170,7 +170,7 @@ def default_explainers(
         #         "clip_margin": None,
         #     },
         # ),
-        "PullbackAscentNoAlphaNoClip": (
+        "PullbackAscentNoAlpha": (
             quantus_pullback_ascent_diff_explain_func,
             {
                 **pga_kwargs_counterfactual,
