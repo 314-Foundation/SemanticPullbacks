@@ -23,7 +23,7 @@ def main(args):
         model_name=args.model_name,
         model_source=args.model_source,
         seed=args.seed,
-        dataset=args.dataset if hasattr(args, "dataset") else "imagenette",
+        dataset=args.dataset if hasattr(args, "dataset") else "imagenet",
     )
     temperatures, pga_kwargs_counterfactual, pga_kwargs_grad, pga_kwargs_adv = (
         get_default_kwargs()
