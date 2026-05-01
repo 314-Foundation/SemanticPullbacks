@@ -72,19 +72,27 @@ def default_explainers(
         #         "steps": 10,
         #     },
         # ),
-        "PullbackAscentNoClip": (
+        "PullbackAscent": (
             quantus_pullback_ascent_diff_explain_func,
             {
                 **pga_kwargs_counterfactual,
                 "clip_margin": None,
             },
         ),
-        "PullbackAscentBisNoClip": (
+        "PullbackAscentBis": (
             quantus_pullback_ascent_diff_explain_func,
             {
                 **pga_kwargs_counterfactual,
                 "clip_margin": None,
                 "steps": 10,
+            },
+        ),
+        "PullbackAscent3": (
+            quantus_pullback_ascent_diff_explain_func,
+            {
+                **pga_kwargs_counterfactual,
+                "clip_margin": None,
+                "steps": 3,
             },
         ),
         "PullbackAscentClipLast": (
@@ -98,18 +106,18 @@ def default_explainers(
                 # "steps": 5,
             },
         ),
-        "PullbackAscentBisClipLast": (
-            quantus_pullback_ascent_diff_explain_func,
-            {
-                **pga_kwargs_counterfactual,
-                "clip_last_only": True,
-                # "clip_last_only": Tre,
-                # "clip_margin": 0.0,
-                # "alpha": 20,
-                # "clip_every_n_steps": 5,
-                "steps": 10,
-            },
-        ),
+        # "PullbackAscentBisClipLast": (
+        #     quantus_pullback_ascent_diff_explain_func,
+        #     {
+        #         **pga_kwargs_counterfactual,
+        #         "clip_last_only": True,
+        #         # "clip_last_only": Tre,
+        #         # "clip_margin": 0.0,
+        #         # "alpha": 20,
+        #         # "clip_every_n_steps": 5,
+        #         "steps": 10,
+        #     },
+        # ),
         # "GradientAscent": (
         #     quantus_gradient_ascent_diff_explain_func,
         #     {
@@ -117,7 +125,7 @@ def default_explainers(
         #         # "clip_margin": None,
         #     },
         # ),
-        "GradientAscentNoClip": (
+        "GradientAscent": (
             quantus_gradient_ascent_diff_explain_func,
             {
                 **pga_kwargs_counterfactual,
@@ -193,22 +201,22 @@ def default_explainers(
             quantus.explain,
             {"method": "IntegratedGradients", "reduce_axes": reduce_axes},
         ),
-        "Saliency": (
-            quantus.explain,
-            {"method": "Saliency", "reduce_axes": reduce_axes},
-        ),
+        # "Saliency": (
+        #     quantus.explain,
+        #     {"method": "Saliency", "reduce_axes": reduce_axes},
+        # ),
         "DeepLift": (
             quantus.explain,
             {"method": "DeepLift", "reduce_axes": reduce_axes},
         ),
-        "InputXGradient": (
-            quantus.explain,
-            {"method": "InputXGradient", "reduce_axes": reduce_axes},
-        ),
-        "Deconvolution": (
-            quantus.explain,
-            {"method": "Deconvolution", "reduce_axes": reduce_axes},
-        ),
+        # "InputXGradient": (
+        #     quantus.explain,
+        #     {"method": "InputXGradient", "reduce_axes": reduce_axes},
+        # ),
+        # "Deconvolution": (
+        #     quantus.explain,
+        #     {"method": "Deconvolution", "reduce_axes": reduce_axes},
+        # ),
         # "Lime": (quantus.explain, {"method": "Lime"}),  # way slower than others
         # # "Occlusion": (quantus.explain, {"method": "Occlusion"}),  # very, very slow
         # "KernelShap": (quantus.explain, {"method": "KernelShap"}),  # slow and bad
