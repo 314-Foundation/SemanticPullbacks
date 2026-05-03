@@ -326,6 +326,7 @@ def default_metrics(filter_metrics=None):
             perturb_func_kwargs={"uniform_low": -1.0, "uniform_high": 1.0},
             # perturb_baseline=0.0,
             abs=True,
+            eps=1e-12,
             # normalise=True,
             # normalise_func=l2_normalize_batch_numpy,
             # perturb_func=quantus.perturb_func.baseline_replacement_by_indices,
