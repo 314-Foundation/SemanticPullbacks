@@ -132,13 +132,13 @@ def default_explainers(
                 "clip_margin": None,
             },
         ),
-        "GradientAscentClipLast": (
-            quantus_gradient_ascent_diff_explain_func,
-            {
-                **pga_kwargs_counterfactual,
-                "clip_last_only": True,
-            },
-        ),
+        # "GradientAscentClipLast": (
+        #     quantus_gradient_ascent_diff_explain_func,
+        #     {
+        #         **pga_kwargs_counterfactual,
+        #         "clip_last_only": True,
+        #     },
+        # ),
         # "PullbackAscentBisNoClip": (
         #     quantus_pullback_ascent_diff_explain_func,
         #     {
@@ -569,7 +569,7 @@ class QuantusEvaluator:
                 if abs(x) >= 1e4 or (abs(x) > 0 and abs(x) < 1e-3):
                     return f"{x:.2e}"
                 else:
-                    s = f"{x:.3f}"
+                    s = f"{x:.2f}"
                     return s.rstrip("0").rstrip(".") if "." in s else s
 
             mean_str = format_val(mean)
