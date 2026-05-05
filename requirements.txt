@@ -3,8 +3,8 @@
 ipykernel
 torchattacks
 spaces
-gradio
-gradio_imageslider
+# gradio
+# gradio_imageslider
 matplotlib
 timm
 captum
