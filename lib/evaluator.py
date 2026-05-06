@@ -9,7 +9,6 @@ import torch
 
 from lib.attributions import (
     fusiongrad_explainer,
-    quantus_double_pullback_ascent_diff_explain_func,
     quantus_gradient_ascent_diff_explain_func,
     quantus_pullback_ascent_diff_explain_func,
     smoothgrad_explainer,
@@ -118,13 +117,6 @@ def default_explainers(
         #         "steps": 10,
         #     },
         # ),
-        # "GradientAscent": (
-        #     quantus_gradient_ascent_diff_explain_func,
-        #     {
-        #         **pga_kwargs_counterfactual,
-        #         # "clip_margin": None,
-        #     },
-        # ),
         "GradientAscent": (
             quantus_gradient_ascent_diff_explain_func,
             {
@@ -184,15 +176,10 @@ def default_explainers(
         "FusionPullback": (fusiongrad_explainer, {"use_pullback": True}),
         "SmoothGrad": (smoothgrad_explainer, {}),
         "FusionGrad": (fusiongrad_explainer, {}),
-        # "UnreducedGradient": (
-        #     quantus.explain,
-        #     {"method": "Gradient", "reduce_axes": ()},
-        # ),
         "Gradient": (
             quantus.explain,
             {"method": "Gradient", "reduce_axes": reduce_axes},
         ),
-        # "GradientOur": (quantus_gradient_ascent_diff_explain_func, pga_kwargs_grad),
         "GradientShap": (
             quantus.explain,
             {"method": "GradientShap", "reduce_axes": reduce_axes},
@@ -338,7 +325,6 @@ def default_metrics(filter_metrics=None):
         #     perturb_baseline="black",
         #     # perturb_func=quantus.perturb_func.baseline_replacement_by_indices,
         # ),
-        # TODO: play around with these metrics later, understand them better
         # "region_perturbation": quantus.RegionPerturbation(
         #     patch_size=14,
         #     regions_evaluation=50,
@@ -359,7 +345,6 @@ def default_metrics(filter_metrics=None):
         #     return_aggregate=False,
         #     # abs=True,
         # ),
-        # TODO: fix these metrics as they cause errors
         # "IROF": quantus.IROF(),
         # "road": quantus.ROAD(),
         # "sufficiency": quantus.Sufficiency(

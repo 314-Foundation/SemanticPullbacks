@@ -343,7 +343,6 @@ def as_cmap_rgb(x, cmap_name="seismic", mode="mean", normalise=True):
 
 def perturb_batch_with_random_patches(
     x_batch: np.ndarray,
-    # perturb_func,
     patch_size=56,
 ):
     """
@@ -354,9 +353,6 @@ def perturb_batch_with_random_patches(
     ----------
     x_batch : np.ndarray
         Input batch of shape (B, C, H, W).
-    perturb_func : callable
-        Function with Quantus-like signature:
-            perturb_func(arr=<flattened batch>, indices=<per-example indices>)
     patch_size : int
         Size of the square patch.
 

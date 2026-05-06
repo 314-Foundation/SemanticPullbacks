@@ -86,24 +86,6 @@ class PullbackAscentDiff(GradientAscentDiff):
         return attributions
 
 
-class DoublePullbackAscentDiff:
-    def __init__(self, model, pga_kwargs_1, pga_kwargs_2, squeeze_channel_mode=None):
-        self.pad1 = PullbackAscentDiff(
-            model,
-            **pga_kwargs_1,
-        )
-        self.pad2 = PullbackAscentDiff(
-            model,
-            squeeze_channel_mode=squeeze_channel_mode,
-            **pga_kwargs_2,
-        )
-
-    def attribute(self, inputs, target):
-        inter_attributions = self.pad1.attribute(inputs, target)
-        final_attributions = self.pad2.attribute(inputs + inter_attributions, target)
-        return final_attributions
-
-
 # QUANTUS ADAPTERS
 # TODO: PGA assumes images are in [-1,1], so we may need to add normalization here?
 
@@ -178,34 +160,6 @@ def quantus_pullback_ascent_diff_explain_func(
         **pga_kwargs,
     )
     attributions = pad.attribute(inputs, targets)
-    return attributions.detach().cpu().numpy()
-
-
-def quantus_double_pullback_ascent_diff_explain_func(
-    model,
-    inputs,
-    targets,
-    pga_kwargs_1,
-    pga_kwargs_2,
-    squeeze_channel_mode=None,
-    device=None,
-):
-    if device is None:
-        device = next(model.parameters()).device
-    else:
-        model.to(device)
-
-    inputs = torch.as_tensor(inputs, device=device)
-    targets = torch.as_tensor(targets, device=device)
-
-    dpad = DoublePullbackAscentDiff(
-        model,
-        squeeze_channel_mode=squeeze_channel_mode,
-        pga_kwargs_1=pga_kwargs_1,
-        pga_kwargs_2=pga_kwargs_2,
-    )
-    attributions = dpad.attribute(inputs, targets)
-
     return attributions.detach().cpu().numpy()
 
 
