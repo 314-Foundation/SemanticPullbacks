@@ -546,7 +546,7 @@ class QuantusEvaluator:
         return pd.read_pickle(f"{filename}.pkl")
 
     @staticmethod
-    def summarize_results(df: pd.DataFrame, quantile=0.0) -> pd.DataFrame:
+    def summarize_results(df: pd.DataFrame, quantile=0.0, precision=3) -> pd.DataFrame:
         def format_mean_std(cell):
             arr = np.array(cell)
             if len(arr) == 0:
@@ -563,18 +563,18 @@ class QuantusEvaluator:
             mean = arr.mean()
             std = arr.std()
 
-            def format_val(x):
+            def format_val(x, precision=2):
                 if np.isnan(x):
                     return ""
                 # Format in scientific notation if very large or very small
                 if abs(x) >= 1e4 or (abs(x) > 0 and abs(x) < 1e-3):
                     return f"{x:.2e}"
                 else:
-                    s = f"{x:.2f}"
+                    s = f"{x:.{precision}f}"
                     return s.rstrip("0").rstrip(".") if "." in s else s
 
-            mean_str = format_val(mean)
-            std_str = format_val(std)
+            mean_str = format_val(mean, precision=precision)
+            std_str = format_val(std, precision=precision - 1)
             return f"{mean_str}\u00b1{std_str}"
 
         return df.map(format_mean_std)
