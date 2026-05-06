@@ -124,13 +124,13 @@ def default_explainers(
                 "clip_margin": None,
             },
         ),
-        # "GradientAscentClipLast": (
-        #     quantus_gradient_ascent_diff_explain_func,
-        #     {
-        #         **pga_kwargs_counterfactual,
-        #         "clip_last_only": True,
-        #     },
-        # ),
+        "GradientAscentClipLast": (
+            quantus_gradient_ascent_diff_explain_func,
+            {
+                **pga_kwargs_counterfactual,
+                "clip_last_only": True,
+            },
+        ),
         # "PullbackAscentBisNoClip": (
         #     quantus_pullback_ascent_diff_explain_func,
         #     {
