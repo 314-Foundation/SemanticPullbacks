@@ -318,6 +318,21 @@ def interleave_batches(batches, k=10):
     return torch.cat(result, dim=0)
 
 
+def interleave_batches_columns(batches, k=10):
+    split_batches = [torch.split(b, k) for b in batches]
+    result = []
+
+    for chunks in zip(*split_batches):
+        # [num_batches, k, C, H, W]
+        stacked = torch.stack(chunks, dim=0)
+        # [k, num_batches, C, H, W]
+        stacked = stacked.transpose(0, 1)
+        # [k * num_batches, C, H, W]
+        result.append(stacked.flatten(0, 1))
+
+    return torch.cat(result, dim=0)
+
+
 def as_cmap_rgb(x, cmap_name="seismic", mode="mean", normalise=True):
     x = squeeze_channels(x, mode=mode)
     if normalise:
