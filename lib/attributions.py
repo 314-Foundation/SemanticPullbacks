@@ -68,8 +68,8 @@ class PullbackAscentDiff(GradientAscentDiff):
     def attribute(self, inputs, target):
         if self.temperatures is not None:
             # NOTE: This modifies the model IN PLACE,
-            # but should not affect forward nor backward passes,
-            # as we restore standard_backward later.
+            # but should not affect later forward nor backward passes,
+            # as we restore standard_backward in the finally block.
             soften_module_inplace_(
                 self.model,
                 temperatures=self.temperatures,
@@ -79,11 +79,10 @@ class PullbackAscentDiff(GradientAscentDiff):
         else:
             set_module_standard_backward_(self.model, standard_backward=False)
 
-        attributions = super().attribute(inputs, target)
-
-        set_module_standard_backward_(self.model, standard_backward=True)
-
-        return attributions
+        try:
+            return super().attribute(inputs, target)
+        finally:
+            set_module_standard_backward_(self.model, standard_backward=True)
 
 
 # QUANTUS ADAPTERS

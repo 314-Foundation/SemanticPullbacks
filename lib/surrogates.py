@@ -316,6 +316,7 @@ def replace_modules_with_surrogates_(
         if base_cls in temperatures:
             if isinstance(child, SurrogateModule):
                 child.temperature = temperatures[base_cls]
+                child.standard_backward = standard_backward
             else:
                 surrogate_cls = SURROGATE_CLASS_MAP[base_cls][0]
                 surrogate_cls.replace_class_with_surrogate(
