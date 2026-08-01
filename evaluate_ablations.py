@@ -21,11 +21,12 @@ from lib.surrogates import (
 @dataclass
 class Ablation:
     parameter: str
-    value: float
-    default_value: float
+    value: object
+    default_value: object
     explainers: Tuple[str, ...]
     temperature_updates: Optional[Dict[Type[nn.Module], float]] = None
     pga_updates: Dict[str, float] = field(default_factory=dict)
+    is_default: bool = False
 
 
 TAU_ABLATIONS = (
@@ -45,7 +46,15 @@ def model_contains_any(model, module_classes):
 
 
 def build_ablations(model, default_temperatures):
-    ablations = []
+    ablations = [
+        Ablation(
+            parameter="default",
+            value="default",
+            default_value="default",
+            explainers=("PullbackAscent", "SoftPullback"),
+            is_default=True,
+        )
+    ]
 
     for parameter, module_classes, values in TAU_ABLATIONS:
         if not model_contains_any(model, module_classes):
@@ -119,6 +128,7 @@ def format_results(results, ablation, model_name):
     df.insert(1, "parameter", ablation.parameter)
     df.insert(2, "value", ablation.value)
     df.insert(3, "default_value", ablation.default_value)
+    df.insert(4, "is_default", ablation.is_default)
     return df
 
 
@@ -131,7 +141,7 @@ def main(args):
         model_name=args.model_name,
         model_source=args.model_source,
         seed=args.seed,
-        dataset=args.dataset,
+        dataset="imagenet",
     )
     (
         default_temperatures,
@@ -188,7 +198,10 @@ def main(args):
             ablation.explainers,
             pga_kwargs_counterfactual=pga_kwargs,
         )
-        metrics = default_metrics(metrics_filter)
+        metrics = default_metrics(
+            metrics_filter,
+            random_logit_seed=args.seed,
+        )
 
         evaluator = QuantusEvaluator(
             model,
@@ -227,12 +240,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--test_mode",
         action="store_true",
-        help="Use only two metrics for a quicker smoke test.",
+        help="Use a reduced metric subset for a quicker run.",
     )
     parser.add_argument("--seed", type=int, default=314)
-    parser.add_argument(
-        "--dataset",
-        default="imagenette",
-        choices=["imagenette", "imagenet"],
-    )
     main(parser.parse_args())

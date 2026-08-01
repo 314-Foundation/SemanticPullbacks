@@ -256,7 +256,10 @@ def default_explainers(
     return explainers
 
 
-def default_metrics(filter_metrics=None):
+def default_metrics(
+    filter_metrics=None,
+    random_logit_seed=42,
+):
     metrics = {
         # "infidelity": quantus.Infidelity(
         "infidelity": InfidelityOptimalScaling(
@@ -379,8 +382,8 @@ def default_metrics(filter_metrics=None):
         # ),
         "random_logit": quantus.RandomLogit(
             num_classes=1000,
+            seed=random_logit_seed,
             # abs=True,
-            # seed=42,
             # normalise=False,
             # similarity_func=cosine,
             # similarity_func=quantus.similarity_func.ssim,

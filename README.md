@@ -10,8 +10,7 @@ Install torch environment according to the `requirements.txt` file.
 
 Run the `evaluate_quantus.py` script to recreate the numerical results.
 
-Run one-at-a-time hyperparameter ablations (the default/middle values are
-intentionally omitted) with:
+Run one-at-a-time hyperparameter ablations with:
 
 ```bash
 python evaluate_ablations.py \
