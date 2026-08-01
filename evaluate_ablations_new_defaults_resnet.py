@@ -26,19 +26,7 @@ class Ablation:
     is_default: bool = False
 
 
-# New baseline defaults chosen from the 25-batch test analysis.
-NEW_DEFAULT_TEMPERATURES = {
-    "tau_relu": 0.5,
-    "tau_maxpool": 0.5,
-    "tau_gelu": 1.0,
-    "tau_attention": 1.0,
-}
-NEW_DEFAULT_PGA = {
-    "K": 2,
-    "alpha": 5,
-}
-
-# Default is always the first element. Remaining elements are ablation values.
+# ResNet-focused baseline defaults from ablation analysis.
 TAU_ABLATIONS = (
     ("tau_relu", (nn.ReLU,), (0.5, 0.4, 0.6, 0.3, 1.0)),
     ("tau_maxpool", (nn.MaxPool2d,), (0.5, 0.3, 0.01)),
@@ -196,9 +184,8 @@ def main(args):
         _,
     ) = get_default_kwargs()
 
-    # Build new default baseline by overriding project defaults.
     base_temperatures = {**default_temperatures}
-    for parameter, module_classes, values in TAU_ABLATIONS:
+    for _, module_classes, values in TAU_ABLATIONS:
         default_value = values[0]
         for module_class in module_classes:
             if module_class in base_temperatures:
@@ -228,7 +215,7 @@ def main(args):
 
     test_mode_tag = "test" if args.test_mode else "full"
     output_file = (
-        f"{args.output_file}_preset=new_defaults"
+        f"{args.output_file}_preset=new_defaults_resnet"
         f"_model_name={args.model_name}"
         f"_n_batches={args.n_batches}_test_mode={test_mode_tag}"
     )
@@ -285,7 +272,7 @@ def main(args):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description=(
-            "Run Semantic Pullbacks ablations around a new default preset "
+            "Run Semantic Pullbacks ablations around a ResNet new-default preset "
             "(tau_relu=0.5, tau_maxpool=0.5, K=2, alpha=5)."
         )
     )
