@@ -147,7 +147,12 @@ def main(args):
 
     metrics_filter = None
     if args.test_mode:
-        metrics_filter = ["monotonicity_correlation", "faithfulness_correlation"]
+        metrics_filter = [
+            "infidelity",
+            "faithfulness_correlation",
+            "faithfulness_estimate",
+            "random_logit",
+        ]
 
     output_file = f"{args.output_file}_model_name={args.model_name}"
     Path(output_file).parent.mkdir(parents=True, exist_ok=True)
@@ -218,7 +223,7 @@ if __name__ == "__main__":
         choices=["torchvision", "timm"],
     )
     parser.add_argument("--batch_size", type=int, default=10)
-    parser.add_argument("--n_batches", type=int, default=2)
+    parser.add_argument("--n_batches", type=int, default=20)
     parser.add_argument(
         "--test_mode",
         action="store_true",
