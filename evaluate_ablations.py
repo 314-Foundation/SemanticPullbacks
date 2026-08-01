@@ -30,15 +30,18 @@ class Ablation:
 
 
 TAU_ABLATIONS = (
-    ("tau_relu", (nn.ReLU,), (0.3, 0.6, 1.0)),
-    ("tau_maxpool", (nn.MaxPool2d,), (0.01, 0.3, 0.5)),
-    ("tau_gelu", (nn.GELU,), (0.5, 1.0, 2.0)),
+    ("tau_relu", (nn.ReLU,), (0.6, 0.3, 1.0, 0.4, 0.5)),
+    ("tau_maxpool", (nn.MaxPool2d,), (0.3, 0.01, 0.5)),
+    ("tau_gelu", (nn.GELU,), (1.0, 0.5, 2.0)),
     (
         "tau_attention",
         (nn.MultiheadAttention, PVTAttention),
-        (0.5, 1.0, 5.0),
+        (1.0, 0.5, 5.0),
     ),
 )
+
+K_ABLATIONS = (5, 1, 2, 3, 10)
+ALPHA_ABLATIONS = (20, 5, 10, 40)
 
 
 def model_contains_any(model, module_classes):
@@ -61,8 +64,8 @@ def build_ablations(model, default_temperatures):
             print(f"Skipping {parameter}: the model has no matching modules.")
             continue
 
-        default_value = values[1]
-        for value in (values[0], values[2]):
+        default_value = values[0]
+        for value in dict.fromkeys(values[1:]):
             temperature_updates = {
                 module_class: value
                 for module_class in module_classes
@@ -78,23 +81,23 @@ def build_ablations(model, default_temperatures):
                 )
             )
 
-    for value in (3, 10):
+    for value in K_ABLATIONS[1:]:
         ablations.append(
             Ablation(
                 parameter="K",
                 value=value,
-                default_value=5,
+                default_value=K_ABLATIONS[0],
                 explainers=("PullbackAscent",),
                 pga_updates={"steps": value},
             )
         )
 
-    for value in (10, 40):
+    for value in ALPHA_ABLATIONS[1:]:
         ablations.append(
             Ablation(
                 parameter="alpha",
                 value=value,
-                default_value=20,
+                default_value=ALPHA_ABLATIONS[0],
                 explainers=("PullbackAscent",),
                 pga_updates={"alpha": value},
             )
@@ -132,6 +135,44 @@ def format_results(results, ablation, model_name):
     return df
 
 
+def ablation_label(ablation):
+    return f"{ablation.parameter}={ablation.value}"
+
+
+def select_ablations(ablations, selector):
+    if not selector:
+        return ablations
+
+    selector = selector.strip()
+
+    if selector.isdigit():
+        index = int(selector)
+        if index < 1 or index > len(ablations):
+            raise ValueError(
+                f"--only_ablation index out of range: {index}. "
+                f"Expected 1..{len(ablations)}."
+            )
+        return [ablations[index - 1]]
+
+    matches = [a for a in ablations if ablation_label(a) == selector]
+    if selector.lower() == "default":
+        matches = [a for a in ablations if a.is_default]
+
+    if len(matches) == 1:
+        return matches
+
+    available = "\n".join(
+        f"  {idx}. {ablation_label(ablation)}"
+        for idx, ablation in enumerate(ablations, start=1)
+    )
+    raise ValueError(
+        "Could not uniquely select one ablation with --only_ablation. "
+        "Use a 1-based index (e.g. --only_ablation 3), 'default', "
+        "or an exact 'parameter=value' label (e.g. --only_ablation K=1).\n"
+        f"Available ablations:\n{available}"
+    )
+
+
 def main(args):
     if args.n_batches < 1:
         raise ValueError("--n_batches must be at least 1.")
@@ -151,6 +192,7 @@ def main(args):
     ) = get_default_kwargs()
 
     ablations = build_ablations(model, default_temperatures)
+    ablations = select_ablations(ablations, args.only_ablation)
     batches = take_batches(loader, args.n_batches)
     if not batches:
         raise RuntimeError("The data loader returned no batches.")
@@ -164,7 +206,11 @@ def main(args):
             "random_logit",
         ]
 
-    output_file = f"{args.output_file}_model_name={args.model_name}"
+    test_mode_tag = "test" if args.test_mode else "full"
+    output_file = (
+        f"{args.output_file}_model_name={args.model_name}"
+        f"_n_batches={args.n_batches}_test_mode={test_mode_tag}"
+    )
     Path(output_file).parent.mkdir(parents=True, exist_ok=True)
     all_results = []
 
@@ -235,12 +281,21 @@ if __name__ == "__main__":
         default="torchvision",
         choices=["torchvision", "timm"],
     )
-    parser.add_argument("--batch_size", type=int, default=10)
-    parser.add_argument("--n_batches", type=int, default=20)
+    parser.add_argument("--batch_size", type=int, default=20)
+    parser.add_argument("--n_batches", type=int, default=10)
     parser.add_argument(
         "--test_mode",
         action="store_true",
         help="Use a reduced metric subset for a quicker run.",
     )
     parser.add_argument("--seed", type=int, default=314)
+    parser.add_argument(
+        "--only_ablation",
+        type=str,
+        default=None,
+        help=(
+            "Run only one ablation. Accepts a 1-based index (e.g. 3), "
+            "'default', or an exact label 'parameter=value' (e.g. K=1)."
+        ),
+    )
     main(parser.parse_args())
