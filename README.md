@@ -81,7 +81,13 @@ distractor classes that differ from the target, repeats the same target image
 in two randomly chosen quadrants, and places one distractor image in each
 remaining quadrant.
 
+Because the attribution maps represent signed changes in an input space
+normalised to `[-1, 1]`, they are first converted into relevance maps using the
+element-wise input-attribution product. The resulting relevance maps are passed
+to the standard Quantus Focus metric with `abs=False` and `normalise=False`.
+Focus retains only positive input-attribution relevance and measures the share
+located in the two target quadrants, so the score remains in `[0, 1]`.
+
 For a visual smoke test, run `notebooks/focus.ipynb`. It prints the target
-classes and quadrant positions, checks the Quantus scores against a direct
-implementation of the Focus formula, and displays the mosaics, target masks,
-and attribution maps.
+classes, quadrant positions, and Focus scores, and displays the mosaics, target
+masks, and relevance maps.

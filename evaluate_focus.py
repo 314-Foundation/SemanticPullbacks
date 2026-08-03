@@ -17,10 +17,17 @@ from lib.setup import setup_notebook
 from lib.surrogates import soften_module_inplace_
 
 EXPLAINER_NAMES = (
-    "PullbackAscent",
     "SoftPullback",
+    "PullbackAscent",
+    "SmoothPullback",
+    "FusionPullback",
     "Gradient",
     "GradientAscent",
+    "SmoothGrad",
+    "FusionGrad",
+    "GradientShap",
+    "IntegratedGradients",
+    "DeepLift",
     "GuidedGradCam",
 )
 QUADRANT_NAMES = ("top_left", "top_right", "bottom_left", "bottom_right")
@@ -208,18 +215,6 @@ def positions_to_masks(positions, image_shape):
     return masks
 
 
-def focus_scores_from_attributions(attributions, positions, use_abs=False):
-    if use_abs:
-        attributions = np.abs(attributions)
-    positive_attributions = np.clip(attributions, a_min=0.0, a_max=None)
-    masks = positions_to_masks(positions, attributions.shape)
-    total_relevance = positive_attributions.reshape(len(attributions), -1).sum(axis=1)
-    target_relevance = (
-        (positive_attributions * masks).reshape(len(attributions), -1).sum(axis=1)
-    )
-    return target_relevance / (total_relevance + 1e-9)
-
-
 def format_positions(positions):
     return ",".join(
         name for name, is_target in zip(QUADRANT_NAMES, positions) if is_target
@@ -261,11 +256,12 @@ def evaluate_mosaics(
                 device=device,
                 **explain_kwargs,
             )
+            relevances = mosaics.images * attributions
             scores = metric(
                 model=model,
                 x_batch=mosaics.images,
                 y_batch=mosaics.targets,
-                a_batch=attributions,
+                a_batch=relevances,
                 custom_batch=mosaics.positions,
                 channel_first=True,
                 device=device,
@@ -321,9 +317,16 @@ def main(args):
         fill_default_temperatures=True,
     )
 
-    explainers = default_explainers(EXPLAINER_NAMES)
+    if args.model_name.startswith("resnet"):
+        gc_layer = model[1].layer4[-1].conv3
+    elif args.model_name.startswith("vgg"):
+        gc_layer = model[1].avgpool
+    else:
+        gc_layer = None
+
+    explainers = default_explainers(EXPLAINER_NAMES, gc_layer=gc_layer)
     metric = quantus.Focus(
-        abs=args.abs,
+        abs=False,
         normalise=False,
         return_aggregate=False,
         disable_warnings=True,
@@ -350,7 +353,7 @@ def main(args):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
-        description="Evaluate attribution methods on Quantus Focus mosaics."
+        description="Evaluate attribution methods with input-attribution Focus."
     )
     parser.add_argument(
         "--output_file",
@@ -380,10 +383,5 @@ if __name__ == "__main__":
         "--dataset",
         choices=["imagenette", "imagenet"],
         default="imagenet",
-    )
-    parser.add_argument(
-        "--abs",
-        action="store_true",
-        help="Apply absolute value to attributions before computing Focus.",
     )
     main(parser.parse_args())
