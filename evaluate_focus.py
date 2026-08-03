@@ -394,7 +394,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--batch_size",
         type=int,
-        default=20,
+        default=10,
         help="Number of mosaics evaluated together.",
     )
     parser.add_argument("--seed", type=int, default=314)
