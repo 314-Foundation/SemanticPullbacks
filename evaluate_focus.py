@@ -10,6 +10,7 @@ import pandas as pd
 import quantus
 import torch
 from quantus.functions.mosaic_func import build_single_mosaic
+from torch.nn import functional as F
 
 from lib.defaults import get_default_kwargs
 from lib.evaluator import default_explainers
@@ -30,6 +31,7 @@ EXPLAINER_NAMES = (
     "DeepLift",
     "GuidedGradCam",
 )
+FOCUS_TILE_SIZE = 112
 QUADRANT_NAMES = ("top_left", "top_right", "bottom_left", "bottom_right")
 
 
@@ -130,6 +132,17 @@ def load_image(dataset, index, expected_label):
     return image.detach().cpu().numpy()
 
 
+def resize_images(images, size):
+    images = torch.from_numpy(np.stack(images))
+    return F.interpolate(
+        images,
+        size=(size, size),
+        mode="bilinear",
+        align_corners=False,
+        antialias=True,
+    ).numpy()
+
+
 def build_focus_mosaics(dataset, class_to_indices, n_mosaics, rng):
     classes = np.asarray(sorted(class_to_indices), dtype=np.int64)
     mosaic_images = []
@@ -159,6 +172,12 @@ def build_focus_mosaics(dataset, class_to_indices, n_mosaics, rng):
             load_image(dataset, index, label)
             for index, label in zip(distractor_indices, distractor_labels)
         ]
+        resized_images = resize_images(
+            [target_image, *distractor_images],
+            size=FOCUS_TILE_SIZE,
+        )
+        target_image = resized_images[0]
+        distractor_images = list(resized_images[1:])
 
         target_quadrants = set(rng.choice(4, size=2, replace=False).tolist())
         target_positions = []
@@ -369,13 +388,13 @@ if __name__ == "__main__":
     parser.add_argument(
         "--n_mosaics",
         type=int,
-        default=80,
+        default=100,
         help="Total number of randomly sampled Focus mosaics.",
     )
     parser.add_argument(
         "--batch_size",
         type=int,
-        default=4,
+        default=20,
         help="Number of mosaics evaluated together.",
     )
     parser.add_argument("--seed", type=int, default=314)

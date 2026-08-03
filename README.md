@@ -79,7 +79,8 @@ python evaluate_focus.py \
 batch size. For every mosaic, the script samples one target class and two
 distractor classes that differ from the target, repeats the same target image
 in two randomly chosen quadrants, and places one distractor image in each
-remaining quadrant.
+remaining quadrant. Each source image is resized to `112x112` before the four
+tiles are combined into a `224x224` model input.
 
 Because the attribution maps represent signed changes in an input space
 normalised to `[-1, 1]`, they are first converted into relevance maps using the
