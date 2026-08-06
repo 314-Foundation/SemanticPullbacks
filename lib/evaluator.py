@@ -534,35 +534,69 @@ class QuantusEvaluator:
         return pd.read_pickle(f"{filename}.pkl")
 
     @staticmethod
-    def summarize_results(df: pd.DataFrame, quantile=0.0, precision=3) -> pd.DataFrame:
-        def format_mean_std(cell):
-            arr = np.array(cell)
-            if len(arr) == 0:
-                return ""
+    def summarize_results(
+        df: pd.DataFrame,
+        quantile=0.0,
+        precision=3,
+        uncertainty="std",
+        confidence_level=0.95,
+        bootstrap_resamples=10_000,
+        bootstrap_seed=314,
+    ) -> pd.DataFrame:
+        """Format cell-wise means with either std or a bootstrap CI of the mean."""
+        if uncertainty not in {"std", "bootstrap_ci"}:
+            raise ValueError("uncertainty must be either 'std' or 'bootstrap_ci'.")
+        if not 0 <= quantile < 0.5:
+            raise ValueError("quantile must be in [0, 0.5).")
+        if not 0 < confidence_level < 1:
+            raise ValueError("confidence_level must be between 0 and 1.")
+        if bootstrap_resamples < 1:
+            raise ValueError("bootstrap_resamples must be at least 1.")
 
-            arr = np.ma.masked_invalid(arr)
+        rng = np.random.default_rng(bootstrap_seed)
+
+        def format_val(x, value_precision=2):
+            if np.isnan(x):
+                return ""
+            if abs(x) >= 1e4 or (abs(x) > 0 and abs(x) < 1e-3):
+                return f"{x:.2e}"
+            value = f"{x:.{value_precision}f}"
+            return value.rstrip("0").rstrip(".") if "." in value else value
+
+        def bootstrap_mean_ci(arr):
+            bootstrap_means = np.empty(bootstrap_resamples, dtype=float)
+            chunk_size = 1_000
+            for start in range(0, bootstrap_resamples, chunk_size):
+                stop = min(start + chunk_size, bootstrap_resamples)
+                indices = rng.integers(
+                    0,
+                    arr.size,
+                    size=(stop - start, arr.size),
+                )
+                bootstrap_means[start:stop] = arr[indices].mean(axis=1)
+
+            alpha = (1 - confidence_level) / 2
+            return np.quantile(bootstrap_means, [alpha, 1 - alpha])
+
+        def format_summary(cell):
+            arr = np.asarray(cell, dtype=float).reshape(-1)
+            arr = arr[np.isfinite(arr)]
+            if arr.size == 0:
+                return ""
 
             if quantile > 0:
                 lower = np.quantile(arr, quantile)
                 upper = np.quantile(arr, 1 - quantile)
-
                 arr = np.clip(arr, lower, upper)
 
-            mean = arr.mean()
-            std = arr.std()
+            mean_str = format_val(arr.mean(), value_precision=precision)
+            if uncertainty == "std":
+                std_str = format_val(arr.std(), value_precision=max(0, precision - 1))
+                return f"{mean_str}\u00b1{std_str}"
 
-            def format_val(x, precision=2):
-                if np.isnan(x):
-                    return ""
-                # Format in scientific notation if very large or very small
-                if abs(x) >= 1e4 or (abs(x) > 0 and abs(x) < 1e-3):
-                    return f"{x:.2e}"
-                else:
-                    s = f"{x:.{precision}f}"
-                    return s.rstrip("0").rstrip(".") if "." in s else s
+            ci_low, ci_high = bootstrap_mean_ci(arr)
+            ci_low_str = format_val(ci_low, value_precision=precision)
+            ci_high_str = format_val(ci_high, value_precision=precision)
+            return f"{mean_str} [{ci_low_str}, {ci_high_str}]"
 
-            mean_str = format_val(mean, precision=precision)
-            std_str = format_val(std, precision=precision - 1)
-            return f"{mean_str}\u00b1{std_str}"
-
-        return df.map(format_mean_std)
+        return df.map(format_summary)
