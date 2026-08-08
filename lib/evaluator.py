@@ -8,6 +8,7 @@ import quantus
 import torch
 
 from lib.attributions import (
+    PullbackWrapper,
     fusiongrad_explainer,
     quantus_gradient_ascent_diff_explain_func,
     quantus_pullback_ascent_diff_explain_func,
@@ -172,17 +173,27 @@ def default_explainers(
                 "steps": 5,
             },
         ),
-        "SmoothPullback": (smoothgrad_explainer, {"use_pullback": True}),
-        "FusionPullback": (fusiongrad_explainer, {"use_pullback": True}),
+        # "SmoothPullback": (smoothgrad_explainer, {"use_pullback": True}),
+        "SmoothPullback": (PullbackWrapper(smoothgrad_explainer), {}),
+        # "FusionPullback": (fusiongrad_explainer, {"use_pullback": True}),
+        "FusionPullback": (PullbackWrapper(fusiongrad_explainer), {}),
         "SmoothGrad": (smoothgrad_explainer, {}),
         "FusionGrad": (fusiongrad_explainer, {}),
         "Gradient": (
             quantus.explain,
             {"method": "Gradient", "reduce_axes": reduce_axes},
         ),
+        "PullbackShap": (
+            PullbackWrapper(quantus.explain),
+            {"method": "GradientShap", "reduce_axes": reduce_axes},
+        ),
         "GradientShap": (
             quantus.explain,
             {"method": "GradientShap", "reduce_axes": reduce_axes},
+        ),
+        "IntegratedPullbacks": (
+            PullbackWrapper(quantus.explain),
+            {"method": "IntegratedGradients", "reduce_axes": reduce_axes},
         ),
         "IntegratedGradients": (
             quantus.explain,
@@ -192,6 +203,10 @@ def default_explainers(
         #     quantus.explain,
         #     {"method": "Saliency", "reduce_axes": reduce_axes},
         # ),
+        "PbDeepLift": (
+            PullbackWrapper(quantus.explain),
+            {"method": "DeepLift", "reduce_axes": reduce_axes},
+        ),
         "DeepLift": (
             quantus.explain,
             {"method": "DeepLift", "reduce_axes": reduce_axes},
@@ -229,6 +244,14 @@ def default_explainers(
             {
                 "GuidedGradCam": (
                     quantus.explain,
+                    {
+                        "method": "GuidedGradCam",
+                        "gc_layer": gc_layer,
+                        "reduce_axes": reduce_axes,
+                    },
+                ),
+                "GuidedPbCam": (
+                    PullbackWrapper(quantus.explain),
                     {
                         "method": "GuidedGradCam",
                         "gc_layer": gc_layer,

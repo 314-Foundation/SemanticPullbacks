@@ -50,6 +50,31 @@ class GradientAscentDiff:
         return attributions
 
 
+class PullbackWrapper:
+    def __init__(self, func, temperatures=None):
+        self.func = func
+        self.temperatures = temperatures
+
+    def __call__(self, model, inputs, targets, **kwargs):
+        # NOTE: This modifies the model IN PLACE,
+        # but should not affect later forward nor backward passes,
+        # as we restore standard_backward in the finally block.
+        if self.temperatures is not None:
+            soften_module_inplace_(
+                model,
+                temperatures=self.temperatures,
+                standard_backward=False,
+                fill_default_temperatures=False,
+            )
+        else:
+            set_module_standard_backward_(model, standard_backward=False)
+
+        try:
+            return self.func(model, inputs, targets, **kwargs)
+        finally:
+            set_module_standard_backward_(model, standard_backward=True)
+
+
 class PullbackAscentDiff(GradientAscentDiff):
     def __init__(
         self,
@@ -67,9 +92,6 @@ class PullbackAscentDiff(GradientAscentDiff):
 
     def attribute(self, inputs, target):
         if self.temperatures is not None:
-            # NOTE: This modifies the model IN PLACE,
-            # but should not affect later forward nor backward passes,
-            # as we restore standard_backward in the finally block.
             soften_module_inplace_(
                 self.model,
                 temperatures=self.temperatures,
@@ -80,9 +102,12 @@ class PullbackAscentDiff(GradientAscentDiff):
             set_module_standard_backward_(self.model, standard_backward=False)
 
         try:
-            return super().attribute(inputs, target)
+            attributions = super().attribute(inputs, target)
         finally:
+            # Reset standard backward after pullback attribution call.
             set_module_standard_backward_(self.model, standard_backward=True)
+
+        return attributions
 
 
 # QUANTUS ADAPTERS
