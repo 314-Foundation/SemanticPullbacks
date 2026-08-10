@@ -135,51 +135,20 @@ def squeeze_channels(
 
 
 def normalise_by_negative_batch(a: torch.Tensor) -> torch.Tensor:
-    """
-    Normalise a batch of images/tensors between [-1, 1] per image using flatten/unflatten.
-
-    Parameters
-    ----------
-    a: torch.Tensor
-        Batch of images/tensors, e.g., shape (B, C, H, W).
-
-    Returns
-    -------
-    torch.Tensor
-        Normalized batch, same shape as input.
-    """
     shape = a.shape
-    B = shape[0]
-    rest_shape = shape[1:]
-    a_flat = a.flatten(1)  # shape: (B, N)
+    a = a.flatten(1)
 
-    a_max = a_flat.max(dim=1, keepdim=True)[0]
-    a_min = a_flat.min(dim=1, keepdim=True)[0]
+    eps = torch.finfo(a.dtype).eps
+    positive_scale = a.amax(dim=1, keepdim=True).clamp_min(eps)
+    negative_scale = (-a.amin(dim=1, keepdim=True)).clamp_min(eps)
 
-    mask_zero = (a_max == 0) & (a_min == 0)
-    mask_pos = a_min > 0
-    mask_neg = a_max < 0
-    mask_mix = (a_min < 0) & (a_max > 0)
+    a = torch.where(
+        a >= 0,
+        a / positive_scale,
+        a / negative_scale,
+    )
 
-    out_flat = torch.zeros_like(a_flat)
-    out_flat = torch.where(mask_pos, a_flat / a_max.clamp(min=1e-8), out_flat)
-    out_flat = torch.where(mask_neg, -a_flat / a_min.clamp(max=-1e-8), out_flat)
-
-    # Mixed sign case: normalize positive and negative parts separately
-    if mask_mix.any():
-        # For each batch element, apply only where mask_mix is True
-        pos = (a_flat > 0).float()
-        neg = (a_flat < 0).float()
-        # Avoid division by zero
-        a_max_safe = a_max.clone()
-        a_max_safe[a_max_safe == 0] = 1e-8
-        a_min_safe = a_min.clone()
-        a_min_safe[a_min_safe == 0] = -1e-8
-        mixed_val = pos * (a_flat / a_max_safe) - neg * (a_flat / a_min_safe)
-        out_flat = torch.where(mask_mix, mixed_val, out_flat)
-
-    out = out_flat.unflatten(1, rest_shape)
-    return out
+    return a.unflatten(1, shape[1:])
 
 
 def l2_normalize_batch_numpy(images, eps=1e-12):
