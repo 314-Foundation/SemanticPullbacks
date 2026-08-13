@@ -72,6 +72,13 @@ def default_explainers(
         #         "steps": 10,
         #     },
         # ),
+        "PullbackAscentClip": (
+            quantus_pullback_ascent_diff_explain_func,
+            {
+                **pga_kwargs_counterfactual,
+                "clip_margin": 0.0,
+            },
+        ),
         "PullbackAscent": (
             quantus_pullback_ascent_diff_explain_func,
             {

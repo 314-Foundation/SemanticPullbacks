@@ -24,11 +24,11 @@ def setup_dataloader(**kwargs):
         dataset = get_imagenet()
     elif dataset == "imagenette":
         try:
-            dataset = get_imagenette(download=True)
+            dataset = get_imagenette(download=True, **kwargs)
         except RuntimeError as e:
             # wierdly, Imagenette raises error if already downloaded (at least in some torchvision versions)
             print(e)
-            dataset = get_imagenette(download=False)
+            dataset = get_imagenette(download=False, **kwargs)
 
     seed = kwargs.get("seed", 314)
     batch_size = kwargs.get("batch_size", 10)

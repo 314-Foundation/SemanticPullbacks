@@ -123,11 +123,11 @@ class ConditionalTransform(nn.Module):
         return img
 
 
-def get_imagenette(download=False):
+def get_imagenette(download=False, size="160px", **kwargs):
     return Imagenette(
         root="../data",
         split="val",  # or "train"
-        size="160px",  # can also be "320" or "full"
+        size=size,  # can also be "320" or "full"
         download=download,
         transform=ConditionalTransform(),
         target_transform=imagenette_label_to_imagenet,
