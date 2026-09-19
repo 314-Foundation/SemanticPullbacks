@@ -64,7 +64,8 @@ class PullbackWrapper:
                 model,
                 temperatures=self.temperatures,
                 standard_backward=False,
-                fill_default_temperatures=False,
+                # fill_default_temperatures=False,
+                fill_default_temperatures=True,
             )
         else:
             set_module_standard_backward_(model, standard_backward=False)
