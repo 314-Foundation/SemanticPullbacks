@@ -246,37 +246,37 @@ def default_explainers(
         #     {"method": "FeaturePermutation"},
         # ),  # very slow
     }
-    if gc_layer is not None:
-        explainers.update(
-            {
-                "GuidedGradCam": (
-                    quantus.explain,
-                    {
-                        "method": "GuidedGradCam",
-                        "gc_layer": gc_layer,
-                        "reduce_axes": reduce_axes,
-                    },
-                ),
-                "GuidedPbCam": (
-                    PullbackWrapper(quantus.explain),
-                    {
-                        "method": "GuidedGradCam",
-                        "gc_layer": gc_layer,
-                        "reduce_axes": reduce_axes,
-                    },
-                ),
-                # "InternalInfluence": (  # CUDA runs out of memory even for small batches
-                #     quantus.explain,
-                #     {"method": "InternalInfluence", "gc_layer": gc_layer},
-                # ),
-                # {
-                #     "LayerGradCam": (  # This is just for a single layer
-                #         quantus.explain,
-                #         {"method": "LayerGradCam", "gc_layer": gc_layer},
-                #     ),
-                # },
-            }
-        )
+    # if gc_layer is not None:
+    #     explainers.update(
+    #         {
+    #             "GuidedGradCam": (
+    #                 quantus.explain,
+    #                 {
+    #                     "method": "GuidedGradCam",
+    #                     "gc_layer": gc_layer,
+    #                     "reduce_axes": reduce_axes,
+    #                 },
+    #             ),
+    #             "GuidedPbCam": (
+    #                 PullbackWrapper(quantus.explain),
+    #                 {
+    #                     "method": "GuidedGradCam",
+    #                     "gc_layer": gc_layer,
+    #                     "reduce_axes": reduce_axes,
+    #                 },
+    #             ),
+    #             # "InternalInfluence": (  # CUDA runs out of memory even for small batches
+    #             #     quantus.explain,
+    #             #     {"method": "InternalInfluence", "gc_layer": gc_layer},
+    #             # ),
+    #             # {
+    #             #     "LayerGradCam": (  # This is just for a single layer
+    #             #         quantus.explain,
+    #             #         {"method": "LayerGradCam", "gc_layer": gc_layer},
+    #             #     ),
+    #             # },
+    #         }
+    #     )
 
     if filter_explainers is not None:
         explainers = {
