@@ -45,6 +45,12 @@ TAU_ABLATIONS = (
 K_ABLATIONS = (5, 1, 2, 3, 10)
 ALPHA_ABLATIONS = (20, 5, 10, 40)
 
+DEFAULT_MODELS = {
+    "resnet50": "torchvision",
+    "vgg11_bn": "torchvision",
+    "pvt_v2_b1": "timm",
+}
+
 
 def model_contains_any(model, module_classes):
     return any(isinstance(module, module_classes) for module in model.modules())
@@ -199,7 +205,7 @@ def select_ablations(ablations, selector):
     )
 
 
-def main(args):
+def run_model(args):
     if args.n_batches < 1:
         raise ValueError("--n_batches must be at least 1.")
 
@@ -282,22 +288,48 @@ def main(args):
     print(f"Results saved to {output_file}.pkl")
 
 
-if __name__ == "__main__":
+def main(args):
+    if args.model_name == "all":
+        if args.model_source is not None:
+            raise ValueError("--model_source requires a specific --model_name.")
+        models = DEFAULT_MODELS.items()
+    else:
+        source = args.model_source or DEFAULT_MODELS.get(args.model_name, "torchvision")
+        models = [(args.model_name, source)]
+
+    for model_name, model_source in models:
+        print(f"Running Focus ablations for {model_name} ({model_source})")
+        model_args = argparse.Namespace(**vars(args))
+        model_args.model_name = model_name
+        model_args.model_source = model_source
+        run_model(model_args)
+        # run_model has released its references before clearing the GPU cache.
+        empty_cache()
+
+
+def build_parser():
     parser = argparse.ArgumentParser(
-        description="Run Semantic Pullbacks hyperparameter ablations for Focus only."
+        description=(
+            "Run Focus hyperparameter ablations. By default, sweep resnet50, "
+            "vgg11_bn and pvt_v2_b1 with all applicable ablations."
+        )
     )
     parser.add_argument(
         "--output_file",
         type=str,
-        required=True,
+        default="results/focus/ablations_focus",
         help="Output path without the .pkl extension or model name.",
     )
-    parser.add_argument("--model_name", type=str, default="resnet50")
+    parser.add_argument(
+        "--model_name", type=str, default="all",
+        help="Model name, or 'all' to sweep the three default architectures.",
+    )
     parser.add_argument(
         "--model_source",
         type=str,
-        default="torchvision",
+        default=None,
         choices=["torchvision", "timm"],
+        help="Source for a single model; inferred for the default architectures.",
     )
     parser.add_argument("--batch_size", type=int, default=20)
     parser.add_argument(
@@ -314,4 +346,8 @@ if __name__ == "__main__":
             "'default', or an exact label 'parameter=value' (e.g. K=1)."
         ),
     )
-    main(parser.parse_args())
+    return parser
+
+
+if __name__ == "__main__":
+    main(build_parser().parse_args())
