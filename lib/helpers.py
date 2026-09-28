@@ -10,6 +10,23 @@ from quantus.helpers.perturbation_utils import make_perturb_func
 from torch import nn
 
 
+
+short_titles_map = {
+    "Image": "Image",
+    "Gradient": "Grad",
+    "SoftPullback": "SfP",
+    "GradientAscent": "GA",
+    "PullbackAscent": "PA",
+    "SmoothGrad": "SmoothG",
+    "SmoothPullback": "SmoothPb",
+    "FusionGrad": "FusionG",
+    "FusionPullback": "FusionPb",
+    "IntegratedGradients": "IG",
+    "GradientShap": "GradShap",
+    "DeepLift": "DeepLift",
+}
+
+
 def plot_example_grid(
     X,
     nrow=4,

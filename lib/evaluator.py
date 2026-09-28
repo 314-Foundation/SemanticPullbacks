@@ -588,10 +588,9 @@ class QuantusEvaluator:
         def format_val(x, value_precision=2):
             if np.isnan(x):
                 return ""
-            if abs(x) >= 1e4 or (abs(x) > 0 and abs(x) < 1e-3):
-                return f"{x:.2e}"
             value = f"{x:.{value_precision}f}"
-            return value.rstrip("0").rstrip(".") if "." in value else value
+            return value
+            # return value.rstrip("0").rstrip(".") if "." in value else value
 
         def bootstrap_mean_ci(arr):
             bootstrap_means = np.empty(bootstrap_resamples, dtype=float)
@@ -621,7 +620,7 @@ class QuantusEvaluator:
 
             mean_str = format_val(arr.mean(), value_precision=precision)
             if uncertainty == "std":
-                std_str = format_val(arr.std(), value_precision=max(0, precision - 1))
+                std_str = format_val(arr.std(), value_precision=precision)
                 return f"{mean_str}\u00b1{std_str}"
 
             ci_low, ci_high = bootstrap_mean_ci(arr)
