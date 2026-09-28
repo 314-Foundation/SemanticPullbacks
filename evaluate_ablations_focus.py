@@ -333,7 +333,7 @@ def build_parser():
     )
     parser.add_argument("--batch_size", type=int, default=20)
     parser.add_argument(
-        "--n_batches", type=int, default=10,
+        "--n_batches", type=int, default=50,
         help="Number of Focus mosaic batches (total mosaics = n_batches * batch_size).",
     )
     parser.add_argument("--seed", type=int, default=314)

@@ -325,18 +325,18 @@ def default_metrics(
             # abs=False,
             # normalise_func=l2_normalize_batch_numpy,
         ),
-        "faithfulness_estimate": quantus.FaithfulnessEstimate(
-            # perturb_func=qua ntus.perturb_func.baseline_replacement_by_indices,
-            # similarity_func=quantus.similarity_func.correlation_pearson,
-            features_in_step=12544 // 4,
-            # features_in_step=12544,
-            # features_in_step=224,
-            # perturb_baseline="black",
-            perturb_baseline=0.0,
-            # abs=False,
-            abs=True,
-            # normalise=False,
-        ),
+        # "faithfulness_estimate": quantus.FaithfulnessEstimate(
+        #     # perturb_func=qua ntus.perturb_func.baseline_replacement_by_indices,
+        #     # similarity_func=quantus.similarity_func.correlation_pearson,
+        #     features_in_step=12544 // 4,
+        #     # features_in_step=12544,
+        #     # features_in_step=224,
+        #     # perturb_baseline="black",
+        #     perturb_baseline=0.0,
+        #     # abs=False,
+        #     abs=True,
+        #     # normalise=False,
+        # ),
         "monotonicity_correlation": quantus.MonotonicityCorrelation(
             nr_samples=10,
             # features_in_step=12544,  # 224*224 / 4
@@ -568,6 +568,7 @@ class QuantusEvaluator:
         df: pd.DataFrame,
         quantile=0.0,
         precision=3,
+        std_precision=2,
         uncertainty="std",
         confidence_level=0.95,
         bootstrap_resamples=10_000,
@@ -620,12 +621,12 @@ class QuantusEvaluator:
 
             mean_str = format_val(arr.mean(), value_precision=precision)
             if uncertainty == "std":
-                std_str = format_val(arr.std(), value_precision=precision)
+                std_str = format_val(arr.std(), value_precision=std_precision)
                 return f"{mean_str}\u00b1{std_str}"
 
             ci_low, ci_high = bootstrap_mean_ci(arr)
-            ci_low_str = format_val(ci_low, value_precision=precision)
-            ci_high_str = format_val(ci_high, value_precision=precision)
+            ci_low_str = format_val(ci_low, value_precision=std_precision)
+            ci_high_str = format_val(ci_high, value_precision=std_precision)
             return f"{mean_str} [{ci_low_str}, {ci_high_str}]"
 
         return df.map(format_summary)

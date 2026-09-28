@@ -14,7 +14,7 @@ from torch import nn
 short_titles_map = {
     "Image": "Image",
     "Gradient": "Grad",
-    "SoftPullback": "SfP",
+    "SoftPullback": "SoftPb",
     "GradientAscent": "GA",
     "PullbackAscent": "PA",
     "SmoothGrad": "SmoothG",
