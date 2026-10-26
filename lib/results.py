@@ -235,6 +235,14 @@ def paired_explainer_differences(
         values="delta_ci95",
     ).reset_index()
     paired_pivot.columns.name = None
+    ordered_metrics = [
+        metric_labels[metric] for metric in SHORT_METRICS_MAP if metric in metric_labels
+    ]
+    extra_metrics = [
+        column for column in paired_pivot.columns
+        if column != "pair" and column not in ordered_metrics
+    ]
+    paired_pivot = paired_pivot[["pair", *ordered_metrics, *extra_metrics]]
     paired_pivot.to_csv(
         results_pkl_path.with_name(results_pkl_path.stem + "_paired_explainers_table.csv"),
         index=False,
