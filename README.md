@@ -1,11 +1,7 @@
 # Semantic Pullbacks
 
 This repository contains the source code for the paper *Pulling Back the
-Curtain on Deep Networks*. It provides a unifying view of neural computation
-that connects gradient smoothing, B-cos-style alignment, feature accentuation,
-robust optimisation, and normalisation effects. Based on this view, the paper
-introduces Semantic Pullbacks as an explanation method for deep neural
-networks.
+Curtain on Deep Networks*.
 
 The repository includes the Semantic Pullback attribution implementations,
 model and dataset utilities, quantitative evaluation code, and notebooks for
@@ -27,8 +23,7 @@ pip install -r requirements.txt
 
 ## Data and execution
 
-Run the commands below from the repository root. They are written on single
-lines so they work in Bash, PowerShell, and Windows CMD.
+Run the commands below from the repository root.
 
 - **ImageNet:** provide the validation images under `../data/imagenet/val`,
   with one subdirectory per class in ImageFolder format. The class ordering
@@ -192,8 +187,7 @@ a display table, and the CSV path. `show=False` disables notebook display.
 
 The notebook also writes `results/pvt_df_20_50.csv`,
 `results/resnet_df_20_50.csv`, and `results/vgg_df_20_50.csv`, plus ablation
-summaries and paired-comparison CSVs. Saved result pickles have been cleaned
-of GuidedGradCam and `faithfulness_estimate` results.
+summaries and paired-comparison CSVs.
 
 ## Targeted accentuations
 
