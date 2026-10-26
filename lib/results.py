@@ -17,6 +17,26 @@ SHORT_METRICS_MAP = {
     "random_logit": "Rand.Logit",
 }
 
+short_titles_map = {
+    "Image": "Image",
+    "Gradient": "Grad",
+    "SoftPullback": "SoftPb",
+    "GradientAscent": "GA",
+    "PullbackAscent": "PA",
+    "SmoothGrad": "SmoothG",
+    "SmoothPullback": "SmoothPb",
+    "FusionGrad": "FusionG",
+    "FusionPullback": "FusionPb",
+    "IntegratedGradients": "IG",
+    "GradientShap": "GradShap",
+    "DeepLift": "DeepLift",
+}
+
+DEFAULT_EXPLAINERS = (
+    "Gradient", "SoftPullback", "GradientAscent", "PullbackAscent",
+    "SmoothGrad", "SmoothPullback", "FusionGrad", "FusionPullback",
+    "IntegratedGradients", "GradientShap", "DeepLift",
+)
 
 def _bootstrap_mean_ci(
     values,
@@ -194,30 +214,6 @@ def paired_explainer_differences(
     return paired_df, paired_pivot, paired_csv_path
 
 
-short_titles_map = {
-    "Image": "Image",
-    "Gradient": "Grad",
-    "SoftPullback": "SoftPb",
-    "GradientAscent": "GA",
-    "PullbackAscent": "PA",
-    "SmoothGrad": "SmoothG",
-    "SmoothPullback": "SmoothPb",
-    "FusionGrad": "FusionG",
-    "FusionPullback": "FusionPb",
-    "IntegratedGradients": "IG",
-    "GradientShap": "GradShap",
-    "DeepLift": "DeepLift",
-}
-
-DEFAULT_EXPLAINERS = (
-    "Gradient", "SoftPullback", "GradientAscent", "PullbackAscent",
-    "SmoothGrad", "SmoothPullback", "FusionGrad", "FusionPullback",
-    "IntegratedGradients", "GradientShap", "DeepLift",
-)
-
-DEFAULT_METRICS = SHORT_METRICS_MAP
-
-
 def load_results_pickle(path):
     """Read saved results, including NumPy 2 pickles under NumPy 1."""
     import sys
@@ -261,7 +257,7 @@ def _format_mean_std(arr, precision=3):
 
 
 def summarize_ablations_pickle(pkl_path, show=True, *, metric_names=None):
-    short_metrics_map = DEFAULT_METRICS if metric_names is None else metric_names
+    short_metrics_map = SHORT_METRICS_MAP if metric_names is None else metric_names
     pkl_path = Path(pkl_path)
     if not pkl_path.exists():
         raise FileNotFoundError(f"File not found: {pkl_path}")
@@ -317,7 +313,7 @@ def process_df(
     explainer_names=None,
 ):
     """Use uncertainty='bootstrap_ci' to report mean [95% CI] instead of mean±std."""
-    short_metrics_map = DEFAULT_METRICS if metric_names is None else metric_names
+    short_metrics_map = SHORT_METRICS_MAP if metric_names is None else metric_names
     names = short_titles_map if explainer_names is None else explainer_names
     selected_columns = list(short_metrics_map.keys())
     
