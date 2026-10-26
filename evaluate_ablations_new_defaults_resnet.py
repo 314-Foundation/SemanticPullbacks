@@ -209,7 +209,6 @@ def main(args):
         metrics_filter = [
             "infidelity",
             "faithfulness_correlation",
-            "faithfulness_estimate",
             "random_logit",
         ]
 

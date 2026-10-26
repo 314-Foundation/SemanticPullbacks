@@ -11,20 +11,7 @@ from torch import nn
 
 
 
-short_titles_map = {
-    "Image": "Image",
-    "Gradient": "Grad",
-    "SoftPullback": "SoftPb",
-    "GradientAscent": "GA",
-    "PullbackAscent": "PA",
-    "SmoothGrad": "SmoothG",
-    "SmoothPullback": "SmoothPb",
-    "FusionGrad": "FusionG",
-    "FusionPullback": "FusionPb",
-    "IntegratedGradients": "IG",
-    "GradientShap": "GradShap",
-    "DeepLift": "DeepLift",
-}
+from lib.results import short_titles_map
 
 
 def plot_example_grid(

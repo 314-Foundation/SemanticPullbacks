@@ -29,7 +29,6 @@ EXPLAINER_NAMES = (
     "GradientShap",
     "IntegratedGradients",
     "DeepLift",
-    "GuidedGradCam",
 )
 FOCUS_TILE_SIZE = 112
 QUADRANT_NAMES = ("top_left", "top_right", "bottom_left", "bottom_right")
@@ -336,14 +335,7 @@ def main(args):
         fill_default_temperatures=True,
     )
 
-    if args.model_name.startswith("resnet"):
-        gc_layer = model[1].layer4[-1].conv3
-    elif args.model_name.startswith("vgg"):
-        gc_layer = model[1].avgpool
-    else:
-        gc_layer = None
-
-    explainers = default_explainers(EXPLAINER_NAMES, gc_layer=gc_layer)
+    explainers = default_explainers(EXPLAINER_NAMES)
     metric = quantus.Focus(
         abs=False,
         normalise=False,

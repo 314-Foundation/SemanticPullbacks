@@ -21,7 +21,6 @@ from lib.metrics import FaithfulnessCorrelationPatches, InfidelityOptimalScaling
 
 def default_explainers(
     filter_explainers=None,
-    gc_layer=None,
     pga_kwargs_counterfactual=None,
     reduce_axes=False,
 ):
@@ -246,37 +245,6 @@ def default_explainers(
         #     {"method": "FeaturePermutation"},
         # ),  # very slow
     }
-    # if gc_layer is not None:
-    #     explainers.update(
-    #         {
-    #             "GuidedGradCam": (
-    #                 quantus.explain,
-    #                 {
-    #                     "method": "GuidedGradCam",
-    #                     "gc_layer": gc_layer,
-    #                     "reduce_axes": reduce_axes,
-    #                 },
-    #             ),
-    #             "GuidedPbCam": (
-    #                 PullbackWrapper(quantus.explain),
-    #                 {
-    #                     "method": "GuidedGradCam",
-    #                     "gc_layer": gc_layer,
-    #                     "reduce_axes": reduce_axes,
-    #                 },
-    #             ),
-    #             # "InternalInfluence": (  # CUDA runs out of memory even for small batches
-    #             #     quantus.explain,
-    #             #     {"method": "InternalInfluence", "gc_layer": gc_layer},
-    #             # ),
-    #             # {
-    #             #     "LayerGradCam": (  # This is just for a single layer
-    #             #         quantus.explain,
-    #             #         {"method": "LayerGradCam", "gc_layer": gc_layer},
-    #             #     ),
-    #             # },
-    #         }
-    #     )
 
     if filter_explainers is not None:
         explainers = {
@@ -325,18 +293,6 @@ def default_metrics(
             # abs=False,
             # normalise_func=l2_normalize_batch_numpy,
         ),
-        # "faithfulness_estimate": quantus.FaithfulnessEstimate(
-        #     # perturb_func=qua ntus.perturb_func.baseline_replacement_by_indices,
-        #     # similarity_func=quantus.similarity_func.correlation_pearson,
-        #     features_in_step=12544 // 4,
-        #     # features_in_step=12544,
-        #     # features_in_step=224,
-        #     # perturb_baseline="black",
-        #     perturb_baseline=0.0,
-        #     # abs=False,
-        #     abs=True,
-        #     # normalise=False,
-        # ),
         "monotonicity_correlation": quantus.MonotonicityCorrelation(
             nr_samples=10,
             # features_in_step=12544,  # 224*224 / 4
@@ -352,6 +308,18 @@ def default_metrics(
             # perturb_func=quantus.perturb_func.baseline_replacement_by_indices,
             # similarity_func=quantus.similarity_func.correlation_spearman,
         ),
+        # "faithfulness_estimate": quantus.FaithfulnessEstimate(
+        #     # perturb_func=qua ntus.perturb_func.baseline_replacement_by_indices,
+        #     # similarity_func=quantus.similarity_func.correlation_pearson,
+        #     features_in_step=12544 // 4,
+        #     # features_in_step=12544,
+        #     # features_in_step=224,
+        #     # perturb_baseline="black",
+        #     perturb_baseline=0.0,
+        #     # abs=False,
+        #     abs=True,
+        #     # normalise=False,
+        # ),
         # "pixel_flipping": quantus.PixelFlipping(
         #     features_in_step=12544 // 4,
         #     # features_in_step=224,
@@ -429,7 +397,7 @@ def default_metrics(
     # "monotonicity_correlation"  # Very Good
     # "faithfulness_estimate"  # Good, Slow
     # "pixel_flipping"  # Good
-    # "infidelity"
+    # "infidelity"  # Great
     # "avg_sensitivity"  # Very Good
     # "max_sensitivity"  # Very Good
     # "sparseness"  # Good
@@ -564,69 +532,8 @@ class QuantusEvaluator:
         return pd.read_pickle(f"{filename}.pkl")
 
     @staticmethod
-    def summarize_results(
-        df: pd.DataFrame,
-        quantile=0.0,
-        precision=3,
-        std_precision=2,
-        uncertainty="std",
-        confidence_level=0.95,
-        bootstrap_resamples=10_000,
-        bootstrap_seed=314,
-    ) -> pd.DataFrame:
-        """Format cell-wise means with either std or a bootstrap CI of the mean."""
-        if uncertainty not in {"std", "bootstrap_ci"}:
-            raise ValueError("uncertainty must be either 'std' or 'bootstrap_ci'.")
-        if not 0 <= quantile < 0.5:
-            raise ValueError("quantile must be in [0, 0.5).")
-        if not 0 < confidence_level < 1:
-            raise ValueError("confidence_level must be between 0 and 1.")
-        if bootstrap_resamples < 1:
-            raise ValueError("bootstrap_resamples must be at least 1.")
+    def summarize_results(*args, **kwargs):
+        """Format results using the shared result-analysis helpers."""
+        from lib.results import summarize_results
 
-        rng = np.random.default_rng(bootstrap_seed)
-
-        def format_val(x, value_precision=2):
-            if np.isnan(x):
-                return ""
-            value = f"{x:.{value_precision}f}"
-            return value
-            # return value.rstrip("0").rstrip(".") if "." in value else value
-
-        def bootstrap_mean_ci(arr):
-            bootstrap_means = np.empty(bootstrap_resamples, dtype=float)
-            chunk_size = 1_000
-            for start in range(0, bootstrap_resamples, chunk_size):
-                stop = min(start + chunk_size, bootstrap_resamples)
-                indices = rng.integers(
-                    0,
-                    arr.size,
-                    size=(stop - start, arr.size),
-                )
-                bootstrap_means[start:stop] = arr[indices].mean(axis=1)
-
-            alpha = (1 - confidence_level) / 2
-            return np.quantile(bootstrap_means, [alpha, 1 - alpha])
-
-        def format_summary(cell):
-            arr = np.asarray(cell, dtype=float).reshape(-1)
-            arr = arr[np.isfinite(arr)]
-            if arr.size == 0:
-                return ""
-
-            if quantile > 0:
-                lower = np.quantile(arr, quantile)
-                upper = np.quantile(arr, 1 - quantile)
-                arr = np.clip(arr, lower, upper)
-
-            mean_str = format_val(arr.mean(), value_precision=precision)
-            if uncertainty == "std":
-                std_str = format_val(arr.std(), value_precision=std_precision)
-                return f"{mean_str}\u00b1{std_str}"
-
-            ci_low, ci_high = bootstrap_mean_ci(arr)
-            ci_low_str = format_val(ci_low, value_precision=std_precision)
-            ci_high_str = format_val(ci_high, value_precision=std_precision)
-            return f"{mean_str} [{ci_low_str}, {ci_high_str}]"
-
-        return df.map(format_summary)
+        return summarize_results(*args, **kwargs)
