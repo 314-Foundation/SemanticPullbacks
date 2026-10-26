@@ -11,6 +11,7 @@ import pandas as pd
 
 SHORT_METRICS_MAP = {
     "infidelity": "Infidelity",
+    "focus": "Focus",
     "faithfulness_correlation": "Faith.Corr",
     "monotonicity_correlation": "Mono.Corr",
     "max_sensitivity": "Max.Sens",
@@ -72,6 +73,33 @@ EXPLAINER_PAIRS = (
 )
 
 
+def _focus_score_frame(path):
+    """Align Focus scores by mosaic identity, never by input row order."""
+    df = load_results_pickle(path)
+    keys = ["model_name", "dataset", "mosaic_index"]
+    metadata = ["target_label", "target_positions", "component_labels", "source_indices"]
+    required = set(keys + metadata + ["explainer", "score"])
+    missing = required.difference(df.columns)
+    if missing:
+        raise ValueError(f"Missing Focus columns in {path}: {sorted(missing)}")
+    if df[["model_name", "dataset"]].drop_duplicates().shape[0] != 1:
+        raise ValueError("Focus input must contain exactly one model and dataset.")
+    if df.duplicated(keys + ["explainer"]).any():
+        raise ValueError("Duplicate Focus scores for the same explainer and mosaic.")
+    # Metadata must agree across explainers, including the source image indices.
+    for column in metadata:
+        values = df[column].map(
+            lambda value: tuple(value) if isinstance(value, (list, np.ndarray)) else value
+        )
+        if values.groupby([df[key] for key in keys]).nunique(dropna=False).gt(1).any():
+            raise ValueError(f"Focus mosaic contents differ across explainers: {column}.")
+    counts = df.groupby(keys)["explainer"].nunique()
+    if not counts.eq(df["explainer"].nunique()).all():
+        raise ValueError("Focus explainers must contain the same set of mosaics.")
+    scores = df.pivot(index=keys, columns="explainer", values="score").sort_index()
+    return pd.DataFrame({"focus": {name: scores[name].to_numpy() for name in scores}})
+
+
 def paired_explainer_differences(
     results_pkl_path,
     metric_overrides=None,
@@ -79,6 +107,8 @@ def paired_explainer_differences(
     show=True,
     bootstrap_resamples=10_000,
     bootstrap_seed=314,
+    *,
+    focus_pkl_path=None,
 ):
     """Compute paired Pullback-minus-Gradient differences and bootstrap CIs.
 
@@ -87,6 +117,8 @@ def paired_explainer_differences(
     explainers must use the same examples in the same order. Non-finite scores
     are removed jointly from each pair. ``metric_overrides`` maps metric names
     to alternative result pickles in the same format.
+    ``focus_pkl_path`` adds per-mosaic Focus results, paired by mosaic ID
+    after checking that both explainers used the same mosaic contents.
 
     Save ``<stem>_paired_explainers.csv`` beside the base pickle and return
     ``(detailed_dataframe, display_dataframe, csv_path)``. Set ``show=False``
@@ -110,7 +142,12 @@ def paired_explainer_differences(
         metric_frames[metric] = override_df
         metric_sources[metric] = override_path
 
+    if focus_pkl_path is not None:
+        metric_frames["focus"] = _focus_score_frame(focus_pkl_path)
+        metric_sources["focus"] = Path(focus_pkl_path)
+
     rng = np.random.default_rng(bootstrap_seed)
+    focus_rng = np.random.default_rng(bootstrap_seed)
     rows = []
     for pullback_name, gradient_name, pair_label in pairs:
         for metric, metric_df in metric_frames.items():
@@ -143,7 +180,7 @@ def paired_explainer_differences(
 
             ci95_low, ci95_high = _bootstrap_mean_ci(
                 differences,
-                rng=rng,
+                rng=focus_rng if metric == "focus" else rng,
                 n_resamples=bootstrap_resamples,
             )
             rows.append({
@@ -173,6 +210,7 @@ def paired_explainer_differences(
 
     metric_directions = {
         "infidelity": "↓",
+        "focus": "↑",
         "faithfulness_correlation": "↑",
         "monotonicity_correlation": "↑",
         "max_sensitivity": "↓",
@@ -197,6 +235,10 @@ def paired_explainer_differences(
         values="delta_ci95",
     ).reset_index()
     paired_pivot.columns.name = None
+    paired_pivot.to_csv(
+        results_pkl_path.with_name(results_pkl_path.stem + "_paired_explainers_table.csv"),
+        index=False,
+    )
 
     print(f"Loaded base results: {results_pkl_path}")
     for metric, source_path in metric_sources.items():
@@ -256,13 +298,38 @@ def _format_mean_std(arr, precision=3):
     return f"{mean_str}±{std_str}"
 
 
-def summarize_ablations_pickle(pkl_path, show=True, *, metric_names=None):
+def summarize_ablations_pickle(
+    pkl_path, show=True, *, metric_names=None, focus_pkl_path=None,
+):
+    """Summarize ablations, optionally joining Focus by configuration.
+
+    Focus input must contain one row per model/parameter/value/default_value/
+    explainer with a ``focus`` score array, as saved by evaluate_ablations_focus.
+    Ordinary per-mosaic Focus results cannot substitute for ablation results.
+    """
     short_metrics_map = SHORT_METRICS_MAP if metric_names is None else metric_names
     pkl_path = Path(pkl_path)
     if not pkl_path.exists():
         raise FileNotFoundError(f"File not found: {pkl_path}")
 
     df = load_results_pickle(pkl_path)
+    if focus_pkl_path is not None:
+        keys = ["model_name", "parameter", "value", "default_value", "explainer"]
+        focus_df = load_results_pickle(focus_pkl_path)
+        missing = set(keys + ["focus"]).difference(focus_df.columns)
+        if missing:
+            raise ValueError(
+                f"Focus ablation results require configuration columns and score arrays; "
+                f"missing {sorted(missing)} in {focus_pkl_path}."
+            )
+        df = df.drop(columns="focus", errors="ignore").merge(
+            focus_df[keys + ["focus"]], on=keys, how="left",
+            validate="one_to_one", indicator=True, sort=False,
+        )
+        unmatched = df.loc[df["_merge"] != "both", keys]
+        if not unmatched.empty:
+            raise ValueError(f"Missing Focus ablations: {unmatched.to_dict('records')}")
+        df = df.drop(columns="_merge")
     metric_cols = [col for col in short_metrics_map if col in df.columns]
     group_cols = ["model_name", "parameter", "value", "default_value", "explainer"]
 
