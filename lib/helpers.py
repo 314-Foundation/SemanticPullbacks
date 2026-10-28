@@ -9,8 +9,6 @@ from quantus.helpers import utils
 from quantus.helpers.perturbation_utils import make_perturb_func
 from torch import nn
 
-
-
 from lib.results import short_titles_map
 
 

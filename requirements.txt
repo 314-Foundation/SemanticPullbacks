@@ -2,7 +2,7 @@
 # torchvision
 ipykernel
 torchattacks
-spaces
+# spaces
 # gradio
 # gradio_imageslider
 matplotlib
