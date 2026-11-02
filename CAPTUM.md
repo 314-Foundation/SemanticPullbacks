@@ -29,28 +29,28 @@ Components:
 Pullback (one-step backward pass):
 
 ```
-Temporarily install adjoint modules in the model
-Activate pullback mode (optionally with temperatures T)
-Compute s_u(X), the selected model output
-Backpropagate from s_u(X) to X using the adjoints
-Restore original modules, including on exceptions
-Return the pullback of s_u at X
+- Temporarily install adjoint modules in the model
+- Activate pullback mode (optionally with temperatures T)
+- Compute s_u(X), the selected model output
+- Backpropagate from s_u(X) to X using the adjoints
+- Restore original modules, including on exceptions
+- Return the pullback of s_u at X
 ```
 
 Pullback Ascent (iterative refinement): gradient-ascent updates using pullbacks.
 
 ```
-Temporarily install adjoint modules in the model
-Activate pullback mode (optionally with temperatures T)
-Run the ascent loop:
-    X^(0) = X
-    Repeat K times:
-        Compute the pullback of the selected output at X^(t)
-        Optionally normalize the direction per example
-        X^(t+1) = X^(t) + α · ν_u(X^(t))
-        Project or clip X^(t+1), if configured
-Restore original modules, including on exceptions
-Return X^(K) - X
+- Temporarily install adjoint modules in the model
+- Activate pullback mode (optionally with temperatures T)
+- Run the ascent loop:
+      X^(0) = X
+      Repeat K times:
+          Compute the pullback of the selected output at X^(t)
+          Optionally normalize the direction per example
+          X^(t+1) = X^(t) + α · ν_u(X^(t))
+          Project or clip X^(t+1), if configured
+- Restore original modules, including on exceptions
+- Return X^(K) - X
 ```
 
 The method is based on the [Semantic Pullbacks paper](https://arxiv.org/abs/2507.22832).
@@ -102,7 +102,7 @@ they are used as-is inside the context.
 switches the model's backward computation between standard autograd and
 pullback adjoints for the duration of the context.
 
-```
+```python
 class BackwardMode(str, Enum):
     GRADIENT = "gradient"
     PULLBACK = "pullback"
@@ -134,7 +134,7 @@ are restored on normal exit and on exceptions.
 Compatible gradient-based Captum attributions run in pullback mode by wrapping
 their calls in the context:
 
-```
+```python
 with backward_mode(BackwardMode.PULLBACK, modules=model):
     attribution = Saliency(model).attribute(inputs, target=target, ...)
 ```
@@ -149,7 +149,7 @@ adjoint declares the module class it substitutes and, optionally, a default
 temperature. An adjoint module must preserve the original forward behavior
 while supplying the pullback backward rule.
 
-```
+```python
 adjoint_params(original: Type[nn.Module], default_temperature: Optional[float] = None)
 ```
 
@@ -162,7 +162,7 @@ adjoint_params(original: Type[nn.Module], default_temperature: Optional[float] =
 
 Example:
 
-```
+```python
 @adjoint_params(original=nn.GELU)
 class AdjointGELU(nn.Module):
     def forward(self, x):
@@ -177,7 +177,7 @@ ordinary gradient equals the pullback need no replacement.
 
 ## check_pullback_coverage
 
-```
+```python
 check_pullback_coverage(model: nn.Module) -> List[str]
 ```
 
